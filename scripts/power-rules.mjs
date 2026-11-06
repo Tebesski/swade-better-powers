@@ -2,6 +2,7 @@ import {effectsAPI, MAINTENANCE, MODULE_ID, normalizeName, PREPARATION, readPowe
 import {spellcastingEntries, usesNoPowerPoints, powerPointBreakdown} from "./powers-data.mjs";
 import {startCast, updateCast} from "./cast-results.mjs";
 import {powerDurationEnded} from "./maintenance.mjs";
+import {importSwadeTools} from "./tools-imports.mjs";
 
 export const noPP = power => power?.type === "power" && usesNoPowerPoints(power, game.settings.get("swade", "noPowerPoints"));
 const rollCosts = new WeakMap();
@@ -99,10 +100,7 @@ export function installPowerRules(wrapMethod) {
 
 export async function installToolsPowerRules(wrapMethod) {
   if (!game.modules.get("swade-tools")?.active) return;
-  const [{default: CharRoll}, {default: BasicRoll}] = await Promise.all([
-    import(foundry.utils.getRoute("modules/swade-tools/scripts/class/CharRoll.js")),
-    import(foundry.utils.getRoute("modules/swade-tools/scripts/class/BasicRoll.js"))
-  ]);
+  const [{default: CharRoll}, {default: BasicRoll}] = await importSwadeTools("scripts/class/CharRoll.js", "scripts/class/BasicRoll.js");
   wrapMethod(CharRoll.prototype, "isItem", function (original, item, count = true) {
     const result = original(item, count);
     if (item.type === "power") this.manageshots = count && !noPP(item);

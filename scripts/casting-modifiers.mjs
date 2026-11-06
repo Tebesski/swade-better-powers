@@ -3,6 +3,7 @@ import {getModifiers, modifierCostLabel, powerPointBreakdown} from "./powers-dat
 import {noPP, preparation} from "./power-rules.mjs";
 import {installCastingChat} from "./casting-chat.mjs";
 import {rollCast, updateCast} from "./cast-results.mjs";
+import {importSwadeTools} from "./tools-imports.mjs";
 
 export function selectedChoices(power, selected) {
   return getModifiers(power).flatMap(modifier => {
@@ -109,7 +110,7 @@ export function installCastingModifiers(wrapMethod) {
 
 export async function installToolsCastingModifiers(wrapMethod) {
   if (!game.modules.get("swade-tools")?.active) return;
-  const {default: ItemDialog} = await import(foundry.utils.getRoute("modules/swade-tools/scripts/class/ItemDialog.js"));
+  const [{default: ItemDialog}] = await importSwadeTools("scripts/class/ItemDialog.js");
   let openingItem;
   const dialogs = new WeakMap();
   wrapMethod(ItemDialog.prototype, "showDialog", function (original, ...args) {
