@@ -2,7 +2,7 @@
    "id": "swade-better-powers",
    "title": "SWADE Better Powers",
    "description": "Powers automation for SWADE..",
-   "version": "1.0.0",
+   "version": "#{VERSION}#",
    "compatibility": {
       "minimum": "14",
       "verified": "14",
@@ -32,5 +32,8 @@
       ]
    },
    "esmodules": ["scripts/main.mjs"],
-   "styles": ["styles/better-powers.css"]
+   "styles": ["styles/better-powers.css"],
+   "url": "#{URL}#",
+   "manifest": "#{MANIFEST}#",
+   "download": "#{DOWNLOAD}#"
 }
