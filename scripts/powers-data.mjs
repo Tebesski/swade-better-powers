@@ -17,15 +17,16 @@ export function parseArcaneSkill(description) {
 
 export function spellcastingEntries(actor) {
   const stored = Object.values(readPowerFlag(actor, "spellcastingEntries") ?? {});
-  const entries = [{id: GENERAL, name: "General", arcane: GENERAL, trait: "", ...stored.find(e => e.arcane === GENERAL)}];
-  for (const entry of stored) if (entry.arcane !== GENERAL) entries.push({...entry});
+  const general = {id: GENERAL, name: "General", arcane: GENERAL, trait: "", ...stored.find(e => e.arcane === GENERAL)};
+  const entries = stored.filter(entry => entry.arcane !== GENERAL).map(entry => ({...entry}));
+  if (readPowerFlag(actor, "generalSpellcastingRemoved") !== true) entries.unshift(general);
   for (const power of actor.itemTypes?.power ?? []) {
     const arcane = powerArcane(power);
-    if (!entries.some(e => normalizeName(e.arcane) === normalizeName(arcane))) {
-      entries.push({id: `existing-${entries.length}`, arcane, name: arcane, trait: power.system.actions?.trait ?? ""});
-    }
+    if (entries.some(e => normalizeName(e.arcane) === normalizeName(arcane))) continue;
+    if (normalizeName(arcane) === GENERAL) entries.unshift(general);
+    else entries.push({id: `existing-${power.id}`, arcane, name: arcane, trait: power.system.actions?.trait ?? ""});
   }
-  return entries;
+  return entries.length ? entries : [general];
 }
 export function entryForPower(power) {
   return power.actor ? spellcastingEntries(power.actor).find(e => normalizeName(e.arcane) === normalizeName(powerArcane(power))) : null;

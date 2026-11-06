@@ -1,6 +1,6 @@
 import {readPowerFlag, MODULE_ID, LEGACY_ID, normalizeName, report} from "./constants.mjs";
 import {powerArcane, spellcastingEntries} from "./powers-data.mjs";
-import {saveEntry, ensureArcaneBackground, initializeBackgrounds} from "./spellcasting.mjs";
+import {saveEntry, removeEntry, queueActor, ensureArcaneBackground, initializeBackgrounds} from "./spellcasting.mjs";
 import {PowerPicker, applyEntry} from "./power-picker.mjs";
 import {renderPowerModifiers, installModifierDescriptionHook, syncModifierEffects} from "./power-modifiers.mjs";
 import {installCastingModifiers, installToolsCastingModifiers} from "./casting-modifiers.mjs";
@@ -31,16 +31,27 @@ async function editEntry(actor, entry) {
   content.className = "standard-form sbs-entry-settings";
   const name = document.createElement("input"); name.type = "text"; name.name = "entryName"; name.value = entry.name;
   name.setAttribute("value", entry.name);
-  const nameLabel = document.createElement("label"); nameLabel.textContent = "Name"; nameLabel.append(name);
+  name.id = `sbs-entry-name-${foundry.utils.randomID()}`;
+  const nameLabel = document.createElement("label"); nameLabel.textContent = "Name"; nameLabel.htmlFor = name.id;
+  const nameRow = document.createElement("div"); nameRow.className = "sbs-entry-field form-fields";
+  nameRow.append(name);
+  if (spellcastingEntries(actor).length > 1) {
+    const remove = document.createElement("button"); remove.type = "button"; remove.className = "sbs-entry-remove";
+    remove.innerHTML = '<i class="fa-solid fa-trash" inert></i>';
+    remove.title = "Remove spellcasting entry"; remove.setAttribute("aria-label", remove.title);
+    nameRow.append(remove);
+  }
+  const nameField = document.createElement("div"); nameField.className = "sbs-entry-name";
+  nameField.append(nameLabel, nameRow);
   const traitInput = document.createElement("input"); traitInput.type = "text"; traitInput.name = "entryTrait"; traitInput.value = entry.trait ?? "";
   traitInput.setAttribute("value", entry.trait ?? "");
   const traitLabel = document.createElement("label"); traitLabel.textContent = "Casting trait";
-  const row = document.createElement("div"); row.className = "sbs-trait-field form-fields";
+  const row = document.createElement("div"); row.className = "sbs-entry-field form-fields";
   const choose = document.createElement("button"); choose.type = "button"; choose.innerHTML = '<i class="fa-solid fa-list" inert></i>'; choose.title = "Choose a trait";
   choose.className = "sbs-entry-trait-picker";
   choose.setAttribute("aria-label", "Choose a trait");
   row.append(traitInput, choose); traitLabel.append(row);
-  content.append(nameLabel, traitLabel);
+  content.append(nameField, traitLabel);
   const shell = document.createElement("div");
   shell.append(content);
   const dialog = new DialogV2({window: {title: "Spellcasting entry"}, position: {width: 440}, content: shell,
@@ -50,6 +61,21 @@ async function editEntry(actor, entry) {
     }}]});
   await dialog.render({force: true});
   // DialogV2 stringifies its supplied content; bind to the actual rendered elements.
+  dialog.element.querySelector(".sbs-entry-remove")?.addEventListener("click", async event => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    const prompt = document.createElement("p");
+    prompt.textContent = `Remove ${entry.name}? Any powers assigned to this entry will move to another spellcasting entry.`;
+    try {
+      const confirmed = await DialogV2.confirm({window: {title: "Remove spellcasting entry"}, content: prompt.outerHTML,
+        yes: {label: "Remove", default: false}, no: {label: "Cancel", default: true}, rejectClose: false});
+      if (confirmed) {
+        await removeEntry(actor, entry.id);
+        await dialog.close();
+      }
+    } catch (error) { report(error); }
+    finally { button.disabled = false; }
+  });
   dialog.element.querySelector(".sbs-entry-trait-picker").addEventListener("click", event => {
     event.preventDefault();
     const input = dialog.element.querySelector('[name="entryTrait"]');
@@ -181,12 +207,16 @@ export function installPowers(wrapMethod) {
       const entry = dropEntries.get(event) ?? dropEntry(this, event);
       if (!entry) return original(event, data);
       const item = await CONFIG.Item.documentClass.fromDropData(data);
-      if (!entry || item?.type !== "power") return original(event, data);
-      if (!this.actor.isOwner) return false;
-      const power = applyEntry(item.toObject(), entry);
-      if (item.actor?.uuid === this.actor.uuid) return item.update({"system.arcane": power.system.arcane, "system.actions.trait": power.system.actions.trait});
-      delete power._id;
-      return this._onDropItemCreate(power);
+      if (item?.type !== "power") return original(event, data);
+      return queueActor(this.actor, async () => {
+        if (!this.actor.isOwner) return false;
+        const current = spellcastingEntries(this.actor).find(candidate => candidate.id === entry.id);
+        if (!current) return false;
+        const power = applyEntry(item.toObject(), current);
+        if (item.actor?.uuid === this.actor.uuid) return item.update({"system.arcane": power.system.arcane, "system.actions.trait": power.system.actions.trait});
+        delete power._id;
+        return this._onDropItemCreate(power);
+      });
     });
   }
   Hooks.on("renderApplicationV2", (app, root) => {

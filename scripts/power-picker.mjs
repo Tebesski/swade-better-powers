@@ -1,5 +1,6 @@
 import {MODULE_ID, normalizeName, powerData} from "./constants.mjs";
-import {entryArcane} from "./powers-data.mjs";
+import {entryArcane, spellcastingEntries} from "./powers-data.mjs";
+import {owned, queueActor} from "./spellcasting.mjs";
 
 const {ApplicationV2, HandlebarsApplicationMixin} = foundry.applications.api;
 export function applyEntry(data, entry) {
@@ -21,18 +22,27 @@ export class PowerPicker extends HandlebarsApplicationMixin(ApplicationV2) {
           if (!this.actor.isOwner) throw new Error("You do not have permission to edit this actor.");
           const power = await foundry.utils.fromUuid(target.dataset.uuid);
           if (!power || power.type !== "power" || !power.testUserPermission(game.user, "LIMITED")) throw new Error("This power is no longer available.");
-          await CONFIG.Item.documentClass.create(applyEntry(powerData(power), this.entry), {parent: this.actor});
+          await this.addPower(powerData(power));
           ui.notifications.info(`${power.name} added to ${this.entry.name}.`);
         } catch(error) { ui.notifications.error(error.message); }
         finally { this.busy = false; }
       },
       createPower: async function () {
         if (!this.actor.isOwner) return;
-        await CONFIG.Item.documentClass.create(applyEntry({name: game.i18n.localize("TYPES.Item.power"), type: "power"}, this.entry), {parent: this.actor, renderSheet: true});
+        await this.addPower({name: game.i18n.localize("TYPES.Item.power"), type: "power"}, {renderSheet: true});
       }
     }
   };
   static PARTS = {body: {template: `modules/${MODULE_ID}/templates/power-picker.hbs`, scrollable: [".sbs-results"]}};
+  addPower(data, options) {
+    return queueActor(this.actor, async () => {
+      owned(this.actor);
+      const entry = spellcastingEntries(this.actor).find(candidate => candidate.id === this.entry.id);
+      if (!entry) throw new Error("This spellcasting entry is no longer available.");
+      this.entry = entry;
+      return CONFIG.Item.documentClass.create(applyEntry(data, entry), {parent: this.actor, ...options});
+    });
+  }
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
     if (!this.sources) {

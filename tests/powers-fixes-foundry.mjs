@@ -56,6 +56,7 @@ try {
       fixes.actor = fixes.actors[index]; await fixes.actor.sheet.render({force: true}); fixes.actor.sheet.changeTab("powers", "primary");
     }, index);
     await page.locator('.sbs-spellcasting-entry[data-sbs-entry="miracles"]').waitFor();
+    assert.equal(await page.locator('.sbs-powers button[data-sbs-power-action="add"]').count(), 0);
     const world = await page.evaluate(() => fixes.world.uuid);
     await drop(world, '.sbs-spellcasting-entry[data-sbs-entry="miracles"] .sbs-entry-empty');
     await page.waitForFunction(() => fixes.actor.items.getName(`${fixes.prefix} World Power`)?.system.actions.trait === "Faith");
@@ -89,6 +90,49 @@ try {
   await page.locator('dialog').getByRole("button", {name: "Save", exact: true}).click();
   await page.waitForFunction(() => fixes.actor.items.getName("Existing Power").system.actions.trait === "smarts");
   console.log("PASS single tooltip, rendered trait-picker selection and save, and removed preparation UI");
+
+  await page.evaluate(async () => {
+    const {ensureArcaneBackground} = await import("/modules/swade-better-powers/scripts/spellcasting.mjs");
+    const [edge] = await fixes.actor.createEmbeddedDocuments("Item", [{name: "Miracles Background", type: "edge",
+      system: {isArcaneBackground: true, description: "<p>Arcane Skill: Miracles</p>"}}, {name: "General Power", type: "power"}]);
+    fixes.edge = edge;
+    await ensureArcaneBackground(edge);
+  });
+  const settings = entry => page.locator(`[data-sbs-entry="${entry}"] [data-sbs-power-action="settings"]`);
+  const remove = page.locator('.sbs-entry-settings').getByRole("button", {name: "Remove spellcasting entry"});
+  await settings("general").click();
+  assert.equal(await remove.evaluate(button => button.previousElementSibling.name === "entryName"
+    && button.getBoundingClientRect().left >= button.previousElementSibling.getBoundingClientRect().right), true);
+  await remove.click();
+  await page.getByRole("button", {name: "Cancel", exact: true}).click();
+  assert.ok(await settings("general").count());
+  await remove.click();
+  await page.getByRole("button", {name: "Remove", exact: true}).click();
+  await settings("general").waitFor({state: "detached"});
+  assert.equal(await page.evaluate(() => fixes.actor.items.getName("General Power").system.arcane), "Science");
+
+  await settings("miracles").click();
+  await remove.click();
+  await page.getByRole("button", {name: "Remove", exact: true}).click();
+  await settings("miracles").waitFor({state: "detached"});
+  const persisted = await page.evaluate(async moduleId => {
+    const {ensureArcaneBackground} = await import("/modules/swade-better-powers/scripts/spellcasting.mjs");
+    await ensureArcaneBackground(fixes.edge);
+    return {entries: Object.keys(fixes.actor.getFlag(moduleId, "spellcastingEntries")),
+      moved: fixes.actor.items.getName("Existing Power").system.arcane, generalPool: !!fixes.actor.system.powerPoints.general,
+      deletedPool: !fixes.actor.system.powerPoints.Miracles};
+  }, moduleId);
+  assert.deepEqual(persisted, {entries: ["science"], moved: "Science", generalPool: true, deletedPool: true});
+  await settings("science").click();
+  await page.locator('.sbs-entry-settings [name="entryName"]').waitFor();
+  assert.equal(await remove.count(), 0);
+  await page.evaluate(async () => {
+    const {removeEntry} = await import("/modules/swade-better-powers/scripts/spellcasting.mjs");
+    try { await removeEntry(fixes.actor, "science"); }
+    catch (error) { if (error.message === "Keep at least one spellcasting entry.") return; throw error; }
+    throw new Error("Removing the last entry should fail");
+  });
+  console.log("PASS removing General and custom entries preserves powers and protects the last entry");
   assert.deepEqual(errors, []);
 } catch (error) {
   await mkdir("test-results", {recursive: true});
