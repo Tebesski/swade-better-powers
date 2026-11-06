@@ -1,0 +1,6 @@
+<section class="sbs-picker-body">
+  <button type="button" class="sbs-create" data-action="createPower"><i class="fa-solid fa-plus" inert></i> Create new power</button>
+  <p class="sbs-entry-hint">Add to {{entry.name}}{{#if entry.trait}} · {{entry.trait}}{{/if}}</p>
+  <input type="search" placeholder="Search powers…" aria-label="Search powers" autocomplete="off">
+  <div class="sbs-results">{{#each sources}}<section class="sbs-group"><h3>{{label}}</h3><ol class="unmarked-list">{{#each rows}}<li class="sbs-row" data-name="{{name}}"><button type="button" class="sbs-choice" data-action="choose" data-uuid="{{uuid}}"><img src="{{img}}" alt=""><span>{{name}}</span></button></li>{{/each}}</ol></section>{{/each}}<p class="sbs-empty" hidden>No matching powers.</p></div>
+</section>

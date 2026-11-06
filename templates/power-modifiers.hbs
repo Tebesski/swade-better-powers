@@ -1,0 +1,78 @@
+{{#*inline "powerBehaviors"}}
+  {{#each changes}}
+    <details class="sbp-power-behavior {{#if (eq type 'adjustDuration')}}sbp-duration-behavior{{/if}}" data-variant-accordion data-id="{{id}}" data-type="{{type}}" {{#if expanded}}open{{/if}}>
+      <summary>{{#if label}}{{label}} · {{/if}}{{title}}</summary>
+      <div class="sbp-behavior-fields">
+        <div class="sbp-behavior-header">
+          <input type="text" data-field="behaviorLabel" value="{{label}}" placeholder="{{title}}" aria-label="Behavior label" {{#unless editable}}disabled{{/unless}}>
+          <label><input type="checkbox" data-field="enabled" {{checked enabled}} {{#unless editable}}disabled{{/unless}}> Enabled</label>
+          {{#if editable}}
+            <button type="button" data-modifier-action="moveBehaviorUp" aria-label="Move behavior up" title="Move behavior up" {{#unless canMoveUp}}disabled{{/unless}}><i class="fa-solid fa-arrow-up" inert></i></button>
+            <button type="button" data-modifier-action="moveBehaviorDown" aria-label="Move behavior down" title="Move behavior down" {{#unless canMoveDown}}disabled{{/unless}}><i class="fa-solid fa-arrow-down" inert></i></button>
+            <button type="button" data-modifier-action="removeBehavior" aria-label="Remove behavior" title="Remove behavior"><i class="fa-solid fa-trash" inert></i></button>
+          {{/if}}
+        </div>
+        {{#each fields}}
+          {{#if checkbox}}
+            <label class="sbp-behavior-checkbox"><input type="checkbox" data-field="{{key}}" {{checked value}} {{#unless ../editable}}disabled{{/unless}}> {{label}}</label>
+          {{else}}
+            <div class="sbp-behavior-field"><span>{{label}}</span>
+              {{#if select}}<select data-field="{{key}}" aria-label="{{label}}" {{#unless ../editable}}disabled{{/unless}}>{{selectOptions options selected=value}}</select>
+              {{else if textarea}}<textarea data-field="{{key}}" aria-label="{{label}}" rows="{{#if (eq key 'script')}}7{{else}}3{{/if}}" {{#unless ../editable}}disabled{{/unless}}>{{value}}</textarea>
+              {{else}}<span class="sbp-behavior-input"><input type="{{inputType}}" data-field="{{key}}" aria-label="{{label}}" value="{{value}}" min="0" step="1" {{#if drop}}data-behavior-drop="{{type}}"{{/if}} {{#unless ../editable}}disabled{{/unless}}>
+                {{#if effect}}{{#if ../editable}}<button type="button" data-modifier-action="pickBehaviorEffect" aria-label="Browse effects" title="Browse effects"><i class="fa-solid fa-list" inert></i></button>{{/if}}{{/if}}
+              </span>{{/if}}
+            </div>
+          {{/if}}
+        {{/each}}
+        {{#if addEffect}}
+          {{#each inlineEffects}}
+            <div class="sbp-behavior-effect"><img src="{{img}}" alt=""><span>{{name}}</span>
+              {{#if ../editable}}
+                {{#if @root.canEditEffects}}<button type="button" data-modifier-action="editBehaviorEffect" data-effect-index="{{@index}}" aria-label="Edit effect with A.E.G.I.S." title="Edit effect with A.E.G.I.S."><i class="fa-solid fa-pen" inert></i></button>{{/if}}
+                <button type="button" data-modifier-action="removeBehaviorEffect" data-effect-index="{{@index}}" aria-label="Remove inline effect" title="Remove inline effect"><i class="fa-solid fa-trash" inert></i></button>
+              {{/if}}
+            </div>
+          {{/each}}
+          {{#if editable}}{{#if @root.canEditEffects}}
+            <button type="button" data-modifier-action="editBehaviorEffect"><i class="fa-solid fa-shield-quartered" inert></i> Construct with A.E.G.I.S.</button>
+          {{/if}}{{/if}}
+        {{/if}}
+      </div>
+    </details>
+  {{/each}}
+  {{#if showAdd}}
+  {{#if @root.editable}}
+    <button type="button" class="sbs-add-option" data-modifier-action="addBehavior"><i class="fa-solid fa-plus" inert></i> Add behavior</button>
+  {{/if}}
+  {{/if}}
+{{/inline}}
+
+<div class="sbs-modifiers-heading"><h3>Modifiers</h3>{{#if editable}}<button type="button" data-modifier-action="add"><i class="fa-solid fa-plus" inert></i> Add modifier</button>{{/if}}</div>
+{{#each modifiers}}
+<details class="sbs-modifier" data-id="{{id}}" {{#if expanded}}open{{/if}}>
+  <summary class="sbs-modifier-name"><input type="text" data-field="name" value="{{name}}" placeholder="Modifier name" aria-label="Modifier name" {{#unless @root.editable}}disabled{{/unless}}>{{#if @root.editable}}<a role="button" tabindex="0" data-modifier-action="remove" title="Delete modifier"><i class="fa-solid fa-trash" inert></i></a>{{/if}}<a role="button" tabindex="0" data-modifier-action="toggle" aria-label="Expand modifier" aria-expanded="{{expanded}}"><i class="fa-solid fa-chevron-down" inert></i></a></summary>
+  <div class="sbs-modifier-body">
+    <div class="editor-container sbs-modifier-description"><prose-mirror name="sbs-modifier-{{id}}" value="{{description}}" data-placeholder="Description..." editable="{{@root.editable}}" toggled>{{{description}}}</prose-mirror></div>
+    {{#each options}}
+      <div class="sbp-modifier-option" data-option-id="{{id}}">
+        <div class="sbs-cost-option" data-id="{{id}}"><input type="text" data-field="label" value="{{label}}" placeholder="Option name" aria-label="Option name" {{#unless @root.editable}}disabled{{/unless}}><span class="sbs-option-cost">(<span contenteditable="{{@root.editable}}" role="textbox" inputmode="decimal" data-field="cost" data-placeholder="N" aria-label="Modifier cost">{{costText}}</span>)</span>{{#if @root.editable}}<button type="button" class="sbp-add-behavior-icon" data-modifier-action="addBehavior" title="Add behavior" aria-label="Add behavior"><i class="fa-solid fa-list-check" inert></i></button><a role="button" tabindex="0" data-modifier-action="removeOption" title="Delete option"><i class="fa-solid fa-xmark" inert></i></a>{{/if}}</div>
+        {{> powerBehaviors}}
+      </div>
+    {{/each}}
+    {{#if @root.editable}}<button type="button" class="sbs-add-option" data-modifier-action="addOption"><i class="fa-solid fa-plus" inert></i> Add Modifier option</button>{{/if}}
+  </div>
+</details>
+{{/each}}
+
+<div class="sbs-modifiers-heading"><h3>Raises</h3>{{#if editable}}<button type="button" data-modifier-action="addRaise"><i class="fa-solid fa-plus" inert></i> Add raise</button>{{/if}}</div>
+{{#each raises}}
+  <details class="sbp-raise" data-variant-accordion data-id="{{id}}" {{#if expanded}}open{{/if}}>
+    <summary>Raised {{level}}</summary>
+    <div class="sbp-raise-fields">
+      <label>Raise level <input type="number" data-field="level" value="{{level}}" min="1" step="1" {{#unless @root.editable}}disabled{{/unless}}></label>
+      {{#if @root.editable}}<button type="button" data-modifier-action="removeRaise"><i class="fa-solid fa-trash" inert></i> Remove raise</button>{{/if}}
+    </div>
+    {{> powerBehaviors showAdd=true}}
+  </details>
+{{/each}}

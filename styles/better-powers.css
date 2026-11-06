@@ -1,0 +1,149 @@
+.sbs-picker .window-content { padding: 12px; }
+.sbs-picker-body { display: flex; flex-direction: column; gap: 12px; height: 100%; min-height: 0; }
+.sbs-picker .sbs-create { flex: 0 0 auto; min-height: 36px; }
+.sbs-picker input[type="search"] { flex: 0 0 auto; }
+.sbs-results { overflow-y: auto; min-height: 0; flex: 1; }
+.sbs-group { margin-bottom: 16px; }
+.sbs-group h3 { margin: 0 0 6px; padding-bottom: 6px; border-bottom: 1px solid var(--color-border-light-primary); }
+.sbs-group ol { margin: 0; padding: 0; list-style: none; }
+.sbs-row { display: flex; align-items: center; gap: 5px; margin: 3px 0; }
+.sbs-row button { margin: 0; min-height: 34px; }
+.sbs-row .sbs-star, .sbs-row .sbs-delete { flex: 0 0 24px; width: 24px; padding: 4px; text-align: center; cursor: pointer; }
+.sbs-row .sbs-star[aria-pressed="true"] { color: var(--color-warm-2, #d4a43c); }
+.sbs-row .sbs-choice { display: flex; align-items: center; gap: 8px; flex: 1; text-align: left; padding: 4px 8px; }
+.sbs-choice img { width: 26px; height: 26px; border: 0; }
+.sbs-choice span { flex: 1; }
+.sbs-choice small { opacity: .7; }
+.sbs-trait-field { position: relative; }
+.sbs-trait-field.form-fields { display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; }
+.sbs-trait-field > input { min-width: 0; flex: 1; }
+.sbs-trait-picker { flex: 0 0 auto; width: auto; min-width: 30px; padding: 0 6px; }
+.sbs-entry-hint { margin: 0; opacity: .75; }
+.application.sheet.swade .sbs-powers { min-height: 0; min-width: 0; max-width: 100%; box-sizing: border-box; overflow-x: hidden; overflow-y: auto; container-type: inline-size; }
+.sbs-powers-add { display: flex; flex-wrap: wrap; justify-content: end; gap: 6px; margin-bottom: 12px; }
+.sbs-powers-add button { width: auto; }
+.sbs-spellcasting-entry { margin: 0 0 20px; min-height: 90px; }
+.application.sheet.swade .sbs-powers .sbs-entry-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 12px; }
+.application.sheet.swade .sbs-powers .sbs-entry-header > .name { min-width: 0; grid-column: auto; grid-row: auto; text-align: left; overflow-wrap: anywhere; }
+.sbs-entry-trait { display: block; font: 13px var(--font-body); opacity: .7; }
+.application.sheet.swade .sbs-entry-controls, .application.sheet.swade .sbs-entry-controls .pp-counter { display: flex; align-items: center; justify-content: end; flex-wrap: nowrap; gap: 7px; min-width: 0; }
+.application.sheet.swade .sbs-entry-controls { font: 18px var(--font-body, var(--default-font)); color: var(--color-text-primary); }
+.sbs-entry-controls > a { padding: 4px; }
+.sbs-entry-controls input[type="number"] { width: 55px; flex: 0 0 55px; }
+.sbs-no-pp-label { display: flex; align-items: center; padding: 0 2px; }
+.sbs-no-pp-text { font-size: 14px; font-family: var(--font-body); white-space: nowrap; }
+.sbs-powers .sbs-power-list { margin: 12px 0; padding: 0; list-style: none; }
+.sbs-powers .sbs-power { display: list-item !important; border-bottom: 1px solid var(--color-border-light-primary); padding: 5px 0; }
+.application.sheet.swade .sbs-powers .sbs-power > details > summary { display: flex; align-items: center; gap: 8px; cursor: pointer; min-height: 38px; list-style: none; }
+.sbs-power summary .name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.sbs-power .item-controls { display: flex; gap: 10px; }
+.sbs-power-img { width: 32px; height: 32px; border: 0; cursor: pointer; }
+.sbs-power-description { padding: 8px; }
+.sbs-entry-empty { padding: 14px 8px; opacity: .6; font-style: italic; }
+.sbs-casting-cost { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px; }
+.sbs-casting-cost label { display: flex; align-items: center; gap: 6px; }
+.sbs-casting-cost input[type="number"] { width: 65px; }
+.sbs-power-actions { display: flex; gap: 5px; flex-wrap: wrap; padding: 6px; }
+.sbs-power-actions button { width: auto; flex: 1; }
+.sbs-entry-settings { display: flex; flex-direction: column; gap: 14px; }
+.sbs-entry-settings label { display: flex; flex-direction: column; gap: 6px; }
+.sbs-entry-settings .sbs-checkbox-label { flex-direction: row; align-items: center; }
+.sbs-modifiers-tab { padding: 8px; }
+.sbs-modifiers-heading, .sbs-modifier-name { display: flex; align-items: center; gap: 8px; }
+.sbs-modifier-name > input { flex: 1; min-width: 0; font-weight: bold; }
+.sbs-modifier-name { cursor: pointer; list-style: none; margin: 0; }
+.application.sheet.swade summary.sbs-modifier-name:is(:hover, :focus) { text-shadow: none; }
+.sbs-modifier-name::marker, .sbs-modifier-name::-webkit-details-marker { display: none; content: ""; }
+.sbs-modifier-name::before { display: none !important; }
+.sbs-modifier-name > a { flex: 0 0 auto; padding: 4px; }
+.sbs-modifier[open] > .sbs-modifier-name [data-modifier-action="toggle"] i { transform: rotate(180deg); }
+.sbs-modifiers-heading button { width: auto; }
+.sbs-modifiers-heading h3 { margin: 0; }
+.sbs-modifiers-heading { margin-block: 8px; justify-content: space-between; }
+.sbp-modifier-option .sbp-add-behavior-icon { flex: 0 0 auto; width: auto; padding-inline: 6px; }
+.sbp-raise { padding: 8px 0; border-bottom: 1px solid var(--color-border-light-primary); }
+.sbp-power-behavior { margin-block: 5px; }
+.sbp-raise-fields, .sbp-behavior-header, .sbp-behavior-input { display: flex; align-items: center; gap: 6px; }
+.sbp-behavior-fields { display: grid; gap: 6px; padding: 6px 0; }
+.sbp-behavior-field { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(120px, 2fr); align-items: center; gap: 6px; }
+.sbp-behavior-checkbox, .sbp-behavior-header label { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.sbp-behavior-header button, .sbp-behavior-input button, .sbp-raise-fields button { width: auto; flex: 0 0 auto; }
+.sbp-behavior-effect { display: flex; align-items: center; gap: 6px; }
+.sbp-behavior-effect img { width: 24px; height: 24px; object-fit: contain; }
+.sbp-behavior-effect span { flex: 1; }
+.sbp-behavior-effect button { width: auto; }
+.sbp-raise-fields input[type="number"] { width: 68px; }
+.application.sheet.swade .sbs-modifiers-tab details[data-variant-accordion] > summary { display: flex; list-style: none; }
+.sbs-modifiers-tab details[data-variant-accordion] > summary::-webkit-details-marker { display: none; }
+.application.sheet.swade .sbs-modifiers-tab details[data-variant-accordion] > summary::before { transform: none; }
+.application.sheet.swade .sbs-modifiers-tab details[data-variant-accordion][open] > summary::before { transform: rotate(90deg); }
+.sbs-modifier { padding: 8px 0; margin-bottom: 8px; border-bottom: 1px solid var(--color-border-light-primary); }
+.sbs-cost-option { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+.sbs-cost-option > input { flex: 1; min-width: 0; }
+.sbs-option-cost { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.sbs-option-cost [contenteditable] { min-width: 24px; text-align: center; outline: none; border-bottom: 1px solid var(--color-border-light-primary); cursor: text; }
+.sbs-option-cost [contenteditable]:empty::before { content: attr(data-placeholder); opacity: .45; pointer-events: none; }
+.sbs-add-option { width: auto; min-height: 24px; padding: 2px 6px; font-size: 12px; }
+.sbs-modifiers-tab.active { display: block; }
+.sbs-modifier { flex: 0 0 auto; }
+.sbs-modifier-description { height: 76px; min-height: 76px; flex: 0 0 76px; margin: 5px 0; border: 1px solid var(--color-border-light-primary); border-radius: 3px; padding: 4px; }
+.sbs-modifier-description:has(prose-mirror.active) { height: 150px; min-height: 150px; }
+.sbs-modifier-description prose-mirror { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.sbs-modifier-description .editor-content:empty::before,
+.sbs-modifier-description .ProseMirror:has(> p:only-child > br.ProseMirror-trailingBreak:only-child)::before { content: "Description..."; opacity: .45; pointer-events: none; }
+.sbs-modifier-description .ProseMirror:has(> p:only-child > br.ProseMirror-trailingBreak:only-child)::before { position: absolute; }
+.sbs-power-modifier-summary { margin-top: 12px; }
+.sbs-power-modifier-summary:not(:has(> hr)) { padding-top: 8px; border-top: 1px solid var(--color-border-light-primary); }
+.sbs-power-modifier-summary:not(:has(> hr)) li > p:first-of-type { display: inline; }
+.sbs-power-modifier-summary > h3 { font: inherit; font-weight: bold; border: 0; margin: 8px 0; }
+.sbs-power-modifier-summary > ul { padding-left: 22px; }
+.sbs-casting-modifiers { margin-top: 6px; }
+.sbs-chosen-modifiers { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
+.sbs-chosen-modifiers button { width: auto; padding: 2px 5px; font-size: 12px; }
+.sbs-casting-total { margin: 5px 0; font-size: 13px; }
+.sbs-power-presets .dropdown { z-index: 10; }
+.sbs-casting-modifiers [hidden] { display: none !important; }
+.sbs-casting-modifiers .modifier button { width: 100%; text-align: left; }
+.sbs-npp-breakdown { margin: 4px 0; padding-left: 18px; list-style: disc; }
+.sbs-npp-breakdown > li { margin: 2px 0; }
+.sbs-npp-formula { font-variant-numeric: tabular-nums; }
+@container (max-width: 520px) {
+  .application.sheet.swade .sbs-powers .sbs-entry-header { grid-template-columns: minmax(0, 1fr); }
+  .application.sheet.swade .sbs-entry-controls { justify-self: end; flex-wrap: wrap; max-width: 100%; }
+}
+.sbp-apply-effects { margin-block: 8px; min-width: 0; }
+.sbp-effect-list { display: grid; gap: 5px; }
+.sbp-effect-slot { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.sbp-effect-slot .sbp-effect-name { flex: 1; min-width: 0; width: auto; text-overflow: ellipsis; }
+.sbp-effect-slot button { flex: 0 0 auto; width: var(--input-height, 32px); padding-inline: 0; }
+.sbp-effect-icon { flex: 0 0 28px; }
+.sbp-effect-icon img { display: block; width: 28px; height: 28px; object-fit: contain; border: 0; border-radius: 3px; }
+.sbp-effect-icon img[hidden] { display: none; }
+.sbp-apply-effects details, .sbp-effect-option { margin-top: 8px; }
+.sbp-effect-modifiers { padding-inline-start: 12px; }
+.sbp-effect-option > :first-child { margin-bottom: 4px; }
+.application.sheet.swade .sbp-apply-effects summary {
+  display: flex;
+  list-style: none;
+  margin-left: 0;
+  padding-block: 2px;
+}
+.sbp-apply-effects summary::-webkit-details-marker { display: none; }
+.application.sheet.swade .sbp-apply-effects details > summary::before {
+  position: static;
+  border-width: .3em 0 .3em .42em;
+  border-inline-start-color: currentColor;
+  transform: none;
+  transform-origin: center;
+}
+.application.sheet.swade .sbp-apply-effects details[open] > summary::before { transform: rotate(90deg); }
+.sbp-effect-controls { gap: 4px; margin-top: 5px; }
+.sbp-power-timers .form-fields select { min-width: 0; }
+.sbp-power-timers button { flex: 0 0 auto; width: auto; }
+.sbp-timer-list { max-height: 45vh; overflow-y: auto; margin: 0; padding: 0; }
+.sbp-timer-list > li { display: flex; align-items: center; gap: 8px; padding-block: 5px; }
+.sbp-timer-list img { width: 28px; height: 28px; object-fit: contain; }
+.sbp-timer-details { display: grid; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.sbp-timer-details small { color: var(--color-text-secondary); }
+.sbs-power-picker [hidden] { display: none !important; }
+:is(.sbs-power-picker, .sbs-modifiers-tab, .sbs-casting-modifiers, .sbs-powers, .sbs-entry-settings) :is(button, a, button i, a i) { transition: none !important; animation: none !important; }

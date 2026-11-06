@@ -1,0 +1,36 @@
+{
+   "id": "swade-better-powers",
+   "title": "SWADE Better Powers",
+   "description": "Powers automation for SWADE..",
+   "version": "1.0.0",
+   "compatibility": {
+      "minimum": "14",
+      "verified": "14",
+      "maximum": "14"
+   },
+   "relationships": {
+      "systems": [
+         {
+            "id": "swade",
+            "type": "system",
+            "compatibility": {
+               "minimum": "6.0.0"
+            }
+         }
+      ],
+      "recommends": [
+         {
+            "id": "swade-better-setting",
+            "type": "module",
+            "reason": "Use the shared skill library to choose casting traits."
+         },
+         {
+            "id": "swade-better-effects",
+            "type": "module",
+            "reason": "Use Effect templates and configure or suppress power roll modifiers."
+         }
+      ]
+   },
+   "esmodules": ["scripts/main.mjs"],
+   "styles": ["styles/better-powers.css"]
+}

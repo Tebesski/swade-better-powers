@@ -1,0 +1,32 @@
+<section class="standard-form">
+  <fieldset>
+    <legend>Start a timer</legend>
+    {{#if powers.length}}
+      <div class="form-group">
+        <label for="{{powerSelectId}}">Power</label>
+        <div class="form-fields">
+          <select id="{{powerSelectId}}">{{selectOptions powers selected=selectedPower valueAttr="id" labelAttr="label"}}</select>
+          <button type="button" data-action="startTimer"><i class="fa-solid fa-hourglass-start" inert></i> Start Timer</button>
+        </div>
+      </div>
+      <p class="hint">Starts the power’s initial duration without a cast roll or a maintenance penalty.</p>
+    {{else}}
+      <p class="hint">This actor needs a No Power Points power with a numeric duration to start a timer.</p>
+    {{/if}}
+  </fieldset>
+  <fieldset>
+    <legend>Tracked powers</legend>
+    <ol class="sbp-timer-list unmarked-list">
+      {{#each timers}}
+        <li>
+          <img src="{{img}}" alt="">
+          <div class="sbp-timer-details"><strong>{{name}}</strong><small>{{detail}}</small></div>
+          <button type="button" data-action="editTimer" data-effect-id="{{id}}" aria-label="Edit timer for {{name}}" title="Edit duration and elapsed time"><i class="fa-solid fa-pen" inert></i></button>
+          <button type="button" data-action="stopTimer" data-effect-id="{{id}}" aria-label="Stop timer for {{name}}" title="Stop timer"><i class="fa-solid fa-stop" inert></i></button>
+        </li>
+      {{else}}
+        <li>No power timers.</li>
+      {{/each}}
+    </ol>
+  </fieldset>
+</section>

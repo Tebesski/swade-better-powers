@@ -1,0 +1,13 @@
+<div class="standard-form sbp-effect-cast-options">
+  {{#if hasRaise}}
+    <label class="checkbox"><input type="checkbox" name="raised" {{checked raised}}> Raised</label>
+  {{/if}}
+  {{#each modifiers}}
+    <div class="form-group">
+      <label class="checkbox"><input type="checkbox" class="sbp-use-modifier" {{checked enabled}}> {{name}}</label>
+      <select data-effect-modifier="{{id}}" aria-label="{{name}} option">
+        {{#each options}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}
+      </select>
+    </div>
+  {{/each}}
+</div>

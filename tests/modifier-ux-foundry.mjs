@@ -1,0 +1,121 @@
+import assert from "node:assert/strict";
+import {mkdir} from "node:fs/promises";
+import {chromium} from "playwright";
+
+const browser = await chromium.launch({headless: true, executablePath: process.env.PLAYWRIGHT_EXECUTABLE, args: ["--enable-unsafe-swiftshader"]});
+const page = await browser.newPage({viewport: {width: 1440, height: 1100}});
+page.setDefaultTimeout(15000);
+const errors = [];
+page.on("pageerror", error => errors.push(error.message));
+const row = '.sbs-modifier[data-id="modifier5"]';
+const tab = () => page.locator(".sbs-modifiers-tab");
+try {
+  await page.goto(process.env.FOUNDRY_QA_URL ?? "http://localhost:30001");
+  await page.locator('select[name="userId"]').selectOption({label: "Gamemaster"});
+  await page.getByRole("button", {name: "Join Game Session", exact: true}).click();
+  await page.waitForFunction(() => globalThis.game?.ready);
+  assert.equal(await page.evaluate(() => game.world.id), "better-setting-qa", "Disposable world required");
+  await page.addStyleTag({content: "#notifications{pointer-events:none!important}"});
+  await page.evaluate(async () => {
+    const id = "swade-better-powers";
+    globalThis.uxQA = {actor: await Actor.create({name: `Modifier UX ${Date.now()}`, type: "character", flags: {[id]: {spellcastingEntries: {magic: {id: "magic", name: "Magic", arcane: "Magic", trait: "Spellcasting", noPowerPoints: true}}}}})};
+    uxQA.skill = await Item.create({name: "Spellcasting", type: "skill", system: {attribute: "smarts"}}, {parent: uxQA.actor});
+    uxQA.power = await Item.create({name: "Protection", type: "power", system: {pp: 1, arcane: "Magic", description: "<p>Base description.</p>", actions: {trait: "Spellcasting"}}}, {parent: uxQA.actor});
+    const {savePowerModifiers} = await import("/modules/swade-better-powers/scripts/power-modifiers.mjs");
+    await savePowerModifiers(uxQA.power, Array.from({length: 10}, (_,index) => ({id: `modifier${index}`, name: index ? `Modifier ${index}` : "Area Protection", description: index ? "" : "<p>Extend <em>Elemental Protection</em> around yourself.</p>", options: [{id: "mbt", label: "MBT", cost: 3}, {id: "lbt", label: "LBT", cost: 4}]})));
+    await uxQA.power.sheet.render({force: true});
+  });
+  await page.locator(".sbs-modifier").first().waitFor({state: "attached"});
+  await page.locator('.swade-item-sheet nav [data-tab="modifiers"]').click();
+  assert.equal(await page.locator("details.sbs-modifier").count(), 10);
+  assert.equal(await page.locator(".sbs-modifier[open]").count(), 0);
+  await page.locator(`${row} [data-modifier-action="toggle"]`).click();
+  await page.locator(`${row} [data-field="name"]`).fill("Updated modifier");
+  await page.locator(`${row} [data-field="name"]`).press("Tab");
+  await page.waitForFunction(() => uxQA.power.getFlag("swade-better-powers", "powerModifiers")[5].name === "Updated modifier" && uxQA.power.sheet.element.querySelector('.sbs-modifier[data-id="modifier5"] [data-field="name"]').value === "Updated modifier");
+  assert.equal(await page.locator(row).evaluate(el => el.open), true);
+  assert.equal(await page.locator(`${row} [data-field="cost"]`).first().evaluate(el => getComputedStyle(el).cursor), "text");
+  assert.equal(await page.locator(`${row} .editor-content`).evaluate(el => getComputedStyle(el, "::before").content), '"Description..."');
+  assert.equal(await page.locator(`${row} [data-modifier-action="toggle"]`).evaluate(el => getComputedStyle(el).transitionDuration), "0s");
+  await page.evaluate(() => {for (const el of uxQA.power.sheet.element.querySelectorAll(".sbs-modifier")) el.open = true;});
+  await page.locator(`${row} [data-field="label"]`).first().scrollIntoViewIfNeeded();
+  const before = await tab().evaluate(el => el.scrollTop);
+  assert.ok(before > 100);
+  await page.locator(`${row} [data-field="label"]`).first().fill("Edited MBT");
+  await page.locator(`${row} [data-field="label"]`).first().press("Tab");
+  await page.waitForFunction(() => uxQA.power.sheet.element.querySelector('.sbs-modifier[data-id="modifier5"] [data-field="label"]').value === "Edited MBT");
+  assert.ok(Math.abs(await tab().evaluate(el => el.scrollTop) - before) < 2);
+  assert.equal(await page.locator(".sbs-modifier[open]").count(), 10);
+  await page.locator(`${row} prose-mirror`).hover();
+  await page.locator(`${row} prose-mirror button.toggle`).click();
+  await page.locator(`${row} prose-mirror .ProseMirror`).fill("Edited description");
+  const descriptionBefore = await tab().evaluate(el => el.scrollTop);
+  await page.locator(`${row} prose-mirror [data-action="save"]`).click();
+  await page.waitForFunction(() => uxQA.power.getFlag("swade-better-powers", "powerModifiers")[5].description.includes("Edited description") && !!uxQA.power.sheet.element.querySelector('.sbs-modifier[data-id="modifier5"] prose-mirror.inactive'));
+  assert.ok(Math.abs(await tab().evaluate(el => el.scrollTop) - descriptionBefore) < 2);
+  const description = await page.evaluate(() => {
+    const root = document.createElement("div"); root.innerHTML = uxQA.power.system.description;
+    const summary = root.querySelector(".sbs-power-modifier-summary");
+    return {line: !!summary.querySelector(":scope > hr"), heading: summary.querySelector("h3").textContent, first: summary.querySelector("li").innerHTML, count: root.querySelectorAll(".sbs-power-modifier-summary").length};
+  });
+  assert.equal(description.line, true); assert.equal(description.heading, "Modifiers"); assert.equal(description.count, 1);
+  assert.match(description.first, /<strong>Area Protection \(\+3 \/ \+4\):<\/strong> Extend <em>Elemental Protection<\/em> around yourself\./);
+  await mkdir("test-results", {recursive: true});
+  await page.locator(".swade-item-sheet").screenshot({path: "test-results/modifier-ux-editor.png"});
+  console.log("PASS accordion headers, placeholders, text cursor, instant buttons, formatted summary and scroll retention after option/description edits");
+  await page.evaluate(async () => {await uxQA.power.sheet.close(); uxQA.pendingRoll = uxQA.actor.rollSkill(uxQA.skill.id, {item: uxQA.power});});
+  await page.locator(".sbs-power-presets .toggle-list").click();
+  assert.equal(await page.locator('.sbs-casting-modifiers input[type="search"]').count(), 0);
+  await page.locator('.sbs-casting-modifiers [data-modifier-id="modifier0"][data-option-id="lbt"]').click();
+  await page.waitForFunction(() => [...foundry.applications.instances.values()].some(app => app instanceof game.swade.RollDialog && app.sbsCastingTotal === 5));
+  await page.locator('.roll-dialog button[type="submit"]').first().click();
+  await page.waitForFunction(() => game.messages.contents.some(msg => msg.speaker.actor === uxQA.actor.id && msg.rolls.some(roll => roll.options.modifiers?.some(mod => mod.sbsPowerBreakdown))));
+  const chat = await page.evaluate(async () => {
+    uxQA.message = game.messages.contents.findLast(msg => msg.speaker.actor === uxQA.actor.id && msg.rolls.some(roll => roll.options.modifiers?.some(mod => mod.sbsPowerBreakdown)));
+    const roll = uxQA.message.rolls[0];
+    return {id: uxQA.message.id, flavor: uxQA.message.flavor, breakdown: roll.options.modifiers.find(mod => mod.sbsPowerBreakdown).sbsPowerBreakdown, cloned: roll.clone().options.modifiers.find(mod => mod.sbsPowerBreakdown).sbsPowerBreakdown};
+  });
+  const card = page.locator(`#chat [data-message-id="${chat.id}"]`);
+  await card.locator(".sbs-npp-breakdown").waitFor({state: "attached"});
+  assert.equal(chat.flavor, "Spellcasting Skill Test");
+  assert.deepEqual(chat.breakdown, chat.cloned);
+  assert.equal(await card.locator(".sbs-npp-breakdown li").count(), 3);
+  assert.equal(await card.locator(".sbs-npp-formula").textContent(), "(1 PP + 4 PP) / 2 = -3");
+  assert.match(await card.locator(".sbs-npp-breakdown").textContent(), /Protection: 1 PPArea Protection — LBT: \+4 PP/);
+  await page.evaluate(() => {ui.sidebar.changeTab("chat", "primary"); ui.sidebar.expand();});
+  await card.locator("details.modifiers").evaluate(el => el.open = true);
+  await card.scrollIntoViewIfNeeded();
+  await card.screenshot({path: "test-results/modifier-ux-chat.png"});
+  console.log("PASS search-free casting choices, nested No PP breakdown, persisted reroll metadata and clean card header");
+  const manual = await page.evaluate(async () => {
+    const id = "swade-better-powers";
+    await uxQA.power.setFlag(id, "maintained", true);
+    const effect = await ActiveEffect.create({name: "QA maintained effect", origin: uxQA.power.uuid, disabled: false}, {parent: uxQA.actor});
+    const fatigue = uxQA.actor.system.fatigue.value;
+    Hooks.callAll("swadeAction", uxQA.actor, uxQA.power, "formula", await new Roll("2").evaluate(), game.user.id);
+    Hooks.callAll("swadeAction", uxQA.actor, uxQA.power, "formula", await new Roll("1d4").evaluate({minimize: true}), game.user.id);
+    await new Promise(resolve => setTimeout(resolve, 200));
+    return {shaken: uxQA.actor.statuses.has("shaken"), maintained: uxQA.power.getFlag(id, "maintained"), disabled: effect.disabled, fatigueChanged: uxQA.actor.system.fatigue.value !== fatigue};
+  });
+  assert.deepEqual(manual, {shaken: false, maintained: true, disabled: false, fatigueChanged: false});
+  const centering = await page.evaluate(async () => {
+    const original = game.settings.get("swade", "noPowerPoints");
+    try {
+      await game.settings.set("swade", "noPowerPoints", true);
+      const hud = game.modules.get("swade-hud").api; hud.actor = uxQA.actor;
+      const root = document.createElement("div"); root.id = "swade-hud-persistent"; root.className = "swade-hud-element advanced";
+      root.style.cssText = "position:fixed;left:25px;top:100px";
+      hud.buildStatistics(root); document.body.append(root);
+      const resources = root.querySelector('[data-panel="resources"]'), amount = resources.querySelector(".resource-value");
+      const panelBounds = resources.getBoundingClientRect(), amountBounds = amount.getBoundingClientRect();
+      const result = {onlyBennies: resources.classList.contains("bennies-only") && resources.children.length === 1, delta: Math.abs((panelBounds.top + panelBounds.bottom - amountBounds.top - amountBounds.bottom) / 2)};
+      root.remove(); return result;
+    } finally {await game.settings.set("swade", "noPowerPoints", original);}
+  });
+  assert.equal(centering.onlyBennies, true); assert.ok(centering.delta < 1);
+  assert.deepEqual(errors, []);
+  console.log("PASS manual casting-failure consequences and vertically centered Bennies without a PP tracker");
+} catch (error) {
+  await mkdir("test-results", {recursive: true}); await page.screenshot({path: "test-results/modifier-ux-failure.png"}).catch(() => {});
+  console.error(errors); throw error;
+} finally {await browser.close();}

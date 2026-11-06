@@ -1,0 +1,43 @@
+{{#*inline "effectRow"}}
+  <div class="sbp-effect-slot" data-reference="{{reference}}">
+    <span class="sbp-effect-icon"><img alt="" hidden></span>
+    <input type="text" class="sbp-effect-name" aria-label="Effect" placeholder="Drop an Effect" readonly>
+    <button type="button" class="sbp-pick-effect" aria-label="Choose effect" title="Choose effect"><i class="fa-solid fa-list" inert></i></button>
+    {{#if reference}}
+      <button type="button" class="sbp-clear-effect" aria-label="Remove effect" title="Remove effect"><i class="fa-solid fa-xmark" inert></i></button>
+    {{/if}}
+  </div>
+{{/inline}}
+{{#*inline "effectRows"}}
+  <div class="sbp-effect-list" data-effect-slot="{{slot}}">
+    {{#each references}}
+      {{> effectRow reference=this}}
+    {{/each}}
+    {{> effectRow reference=""}}
+  </div>
+{{/inline}}
+
+<legend>Apply Effect</legend>
+{{> effectRows slot="base" references=base}}
+<details data-effect-accordion="raised">
+  <summary>Raised</summary>
+  {{> effectRows slot="raised" references=raised}}
+</details>
+<details data-effect-accordion="modifiers">
+  <summary>Modifier</summary>
+  <div class="sbp-effect-modifiers">
+    {{#each modifiers}}
+      <details data-effect-accordion="modifier-{{id}}">
+        <summary>{{name}}</summary>
+        {{#each options}}
+          <div class="sbp-effect-option">
+            <div>{{name}}</div>
+            {{> effectRows slot=slot references=references}}
+          </div>
+        {{/each}}
+      </details>
+    {{else}}
+      <p class="hint">Add a power modifier in the Mod/Raise tab to configure its effects.</p>
+    {{/each}}
+  </div>
+</details>

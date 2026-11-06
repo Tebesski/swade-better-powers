@@ -1,0 +1,33 @@
+<section class="{{tab.tabCssClass}} powers sbs-powers" data-group="{{tab.group}}" data-tab="{{tab.id}}">
+  {{#if editable}}
+    <div class="sbs-powers-add">
+      <button type="button" data-sbs-power-action="timers"><i class="fa-solid fa-hourglass-half" inert></i> Power Timers</button>
+      <button type="button" data-sbs-power-action="add"><i class="fa-solid fa-plus" inert></i> Add Power</button>
+    </div>
+  {{/if}}
+  {{#each sbsEntries}}
+  <section class="sbs-spellcasting-entry" data-sbs-entry="{{id}}" data-arcane="{{arcane}}">
+    <header class="section-header sbs-entry-header">
+      <span class="name">{{name}}{{#if trait}}<small class="sbs-entry-trait">{{trait}}</small>{{/if}}</span>
+      <span class="sbs-entry-controls">
+        {{#if @root.editable}}<a role="button" tabindex="0" data-sbs-power-action="add" title="Add Power" aria-label="Add Power to {{name}}"><i class="fa-solid fa-plus" inert></i></a><a role="button" tabindex="0" data-sbs-power-action="settings" title="Spellcasting settings" aria-label="Edit {{name}}"><i class="fa-solid fa-gear" inert></i></a>{{/if}}
+        <label class="sbs-no-pp-label" data-tooltip="No Power Points"><input type="checkbox" class="sbs-no-pp" aria-label="No Power Points" {{checked noPP}} {{#unless @root.editable}}disabled{{/unless}}></label>
+        {{#if noPP}}<span class="sbs-no-pp-text">No Power Points enabled</span>{{else}}
+        <span class="pp-counter controls"><span>PP:</span><input type="number" name="system.powerPoints.{{arcane}}.value" value="{{value}}" aria-label="Current Power Points" {{#unless @root.editable}}disabled{{/unless}}>/<input type="number" name="system.powerPoints.{{arcane}}.max" value="{{max}}" aria-label="Maximum Power Points" {{#unless @root.editable}}disabled{{/unless}}>{{#if @root.editable}}<a role="button" tabindex="0" data-sbs-power-action="refresh" title="Refresh Power Points"><i class="fa-solid fa-arrows-rotate" inert></i></a>{{/if}}</span>
+        {{/if}}
+      </span>
+    </header>
+    <ul class="sbs-power-list unmarked-list">
+      {{#each powers}}
+      <li class="power item sbs-power" data-item-id="{{id}}" data-document-class="Item" draggable="true">
+        <details><summary class="power-header"><img class="sbs-power-img" src="{{img}}" alt="" data-sbs-power-action="show"><a class="name item-name">{{name}}</a>{{#if @root.editable}}<span class="item-controls"><a role="button" tabindex="0" data-sbs-power-action="favorite" title="Favorite"><i class="{{#if system.favorite}}fa-solid{{else}}fa-regular{{/if}} fa-star" inert></i></a><a role="button" tabindex="0" data-sbs-power-action="edit" title="Edit power"><i class="fa-solid fa-pen-to-square" inert></i></a></span>{{/if}}</summary>
+        <div class="sbs-power-description">{{{description}}}</div>
+        {{#if @root.editable}}<div class="sbs-power-card" data-item-id="{{id}}"><div class="sbs-casting-cost"><label>PP Cost <input class="pp-adjust" type="number" min="0" value="{{cost}}"></label>{{#unless ../noPP}}<a role="button" tabindex="0" data-sbs-power-action="pp-minus" title="Spend Power Points"><i class="fa-solid fa-minus" inert></i></a><a role="button" tabindex="0" data-sbs-power-action="pp-plus" title="Refund Power Points"><i class="fa-solid fa-plus" inert></i></a>{{/unless}}{{#if ../noPP}}<label title="Each maintained power applies −1 to further arcane rolls"><input type="checkbox" class="sbs-maintained" {{checked maintained}}> Maintain power</label>{{/if}}</div>
+        <div class="sbs-power-actions">{{#if system.actions.trait}}<button type="button" data-sbs-power-action="formula"><i class="fa-solid fa-hand-sparkles" inert></i> {{system.actions.trait}}</button>{{/if}}{{#if system.damage}}<button type="button" data-sbs-power-action="damage">{{system.damage}}</button>{{/if}}{{#each extraActions}}<button type="button" data-sbs-power-action="{{id}}">{{name}}</button>{{/each}}{{#each templates}}<button type="button" data-sbs-power-action="template" data-template="{{key}}">{{localize label}}</button>{{/each}}</div></div>{{/if}}
+        </details>
+      </li>
+      {{else}}<li class="sbs-entry-empty">Drop a power here or use + to add one.</li>{{/each}}
+    </ul>
+  </section>
+  {{/each}}
+</section>
