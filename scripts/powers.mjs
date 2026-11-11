@@ -2,7 +2,7 @@ import {readPowerFlag, MODULE_ID, LEGACY_ID, normalizeName, report} from "./cons
 import {powerArcane, spellcastingEntries} from "./powers-data.mjs";
 import {saveEntry, removeEntry, queueActor, ensureArcaneBackground, initializeBackgrounds} from "./spellcasting.mjs";
 import {PowerPicker, applyEntry} from "./power-picker.mjs";
-import {renderPowerModifiers, installModifierDescriptionHook, syncModifierEffects} from "./power-modifiers.mjs";
+import {alignModifierDescription, enableLibraryDrop, renderPowerModifiers, separateModifierDescription, installModifierDescriptionHook, syncModifierEffects} from "./power-modifiers.mjs";
 import {installCastingModifiers, installToolsCastingModifiers} from "./casting-modifiers.mjs";
 import {noPP, recordPowerCost, installPowerRules, installToolsPowerRules} from "./power-rules.mjs";
 import {initializeTemplateModifiers} from "./template-modifiers.mjs";
@@ -54,7 +54,7 @@ async function editEntry(actor, entry) {
   content.append(nameField, traitLabel);
   const shell = document.createElement("div");
   shell.append(content);
-  const dialog = new DialogV2({window: {title: "Spellcasting entry"}, position: {width: 440}, content: shell,
+  const dialog = new DialogV2({classes: ["sbp-dialog"], window: {title: "Spellcasting entry"}, position: {width: 440}, content: shell,
     buttons: [{action: "save", label: "Save", default: true, callback: async (_event, button) => {
       const form = button.form;
       await saveEntry(actor, entry, {name: form.querySelector('[name="entryName"]').value, trait: form.querySelector('[name="entryTrait"]').value.trim()});
@@ -67,7 +67,7 @@ async function editEntry(actor, entry) {
     const prompt = document.createElement("p");
     prompt.textContent = `Remove ${entry.name}? Any powers assigned to this entry will move to another spellcasting entry.`;
     try {
-      const confirmed = await DialogV2.confirm({window: {title: "Remove spellcasting entry"}, content: prompt.outerHTML,
+      const confirmed = await DialogV2.confirm({classes: ["sbp-dialog"], window: {title: "Remove spellcasting entry"}, content: prompt.outerHTML,
         yes: {label: "Remove", default: false}, no: {label: "Cancel", default: true}, rejectClose: false});
       if (confirmed) {
         await removeEntry(actor, entry.id);
@@ -85,7 +85,7 @@ async function editEntry(actor, entry) {
       input.dispatchEvent(new Event("change", {bubbles: true}));
     };
     const picker = game.modules.get(LEGACY_ID)?.api?.openTraitPicker;
-    if (picker) void picker(onSelect, {title: "Choose a casting trait"}).catch(report);
+    if (picker) void picker(onSelect, {title: "Choose a casting trait", classes: ["sbp-dialog"]}).catch(report);
     else void pickCastingTrait(actor).then(value => { if (value) onSelect(value); }).catch(report);
   });
 }
@@ -100,7 +100,7 @@ function pickCastingTrait(actor) {
   for (const name of [...new Set(actor.itemTypes.skill.map(skill => skill.name))].sort()) skills.append(new Option(name));
   select.name = "trait";
   select.append(attributes, skills);
-  return foundry.applications.api.DialogV2.prompt({window: {title: "Choose a casting trait"}, content: select.outerHTML,
+  return foundry.applications.api.DialogV2.prompt({classes: ["sbp-dialog"], window: {title: "Choose a casting trait"}, content: select.outerHTML,
     ok: {label: "Choose", callback: (_event, button) => button.form.elements.trait.value}, rejectClose: false});
 }
 
@@ -170,6 +170,11 @@ export function installPowers(wrapMethod) {
     }
     return result;
   });
+  wrapMethod(itemSheet, "_renderHTML", async function (original, ...args) {
+    const parts = await original(...args);
+    await separateModifierDescription(this.document, parts);
+    return parts;
+  });
   wrapMethod(itemSheet, "_processFormData", function (original, event, form, formData) {
     for (const key of Object.keys(formData.object)) if (key.startsWith("sbs-modifier-")) delete formData.object[key];
     return original(event, form, formData);
@@ -220,7 +225,11 @@ export function installPowers(wrapMethod) {
     });
   }
   Hooks.on("renderApplicationV2", (app, root) => {
-    if (app.document?.type === "power") void renderPowerModifiers(app, root).catch(report);
+    if (app.document?.type === "power") {
+      enableLibraryDrop(app, root);
+      alignModifierDescription(app, root);
+      void renderPowerModifiers(app, root).catch(report);
+    }
     const actor = app.actor;
     if (!["character", "npc"].includes(actor?.type) || !app.isEditable || root.dataset.sbsPowersListener) return;
     root.dataset.sbsPowersListener = "true";

@@ -9,7 +9,8 @@ export const BEHAVIORS = {
     select("operation", "Operation", "add", Object.fromEntries(DURATION_OPERATIONS.map(op => [op, op[0].toUpperCase() + op.slice(1)]))),
     field("amount", "Amount", "number", 1), select("unit", "Unit", "", {"": "Current unit", ...units})]},
   increaseDieType: {label: "Increase Die Type", fields: [
-    select("scope", "Dice to increase", "base", {base: "Base Die Set", all: "All Dice"}), field("steps", "Die steps (up to d12)", "text", "1")]},
+    select("scope", "Dice to increase", "base", {base: "Base Die Set", all: "All Dice"}), field("steps", "Die steps", "text", "1"),
+    field("flatOverflow", "Add flat modifier if die increases beyond d12", "checkbox", false)]},
   addDamageDice: {label: "Add Damage Dice", fields: [field("formula", "Damage formula to add", "text", "1d6")]},
   chatMessage: {label: "Send Chat Message", fields: [field("text", "Message", "textarea", ""),
     select("rollMode", "Visibility", "inherit", {inherit: "Same as cast", publicroll: "Public Roll", gmroll: "Private GM Roll", blindroll: "Blind GM Roll", selfroll: "Self Roll"})]},

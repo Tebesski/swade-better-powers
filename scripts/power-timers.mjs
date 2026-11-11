@@ -29,7 +29,7 @@ class PowerTimers extends HandlebarsApplicationMixin(ApplicationV2) {
           <p class="hint">Elapsed is the current tick in the selected unit. Reaching the total duration triggers expiration.</p>
         </div>`;
         try {
-          await foundry.applications.api.DialogV2.prompt({window: {title: `Edit Timer · ${timerName(effect)}`}, content, rejectClose: false,
+          await foundry.applications.api.DialogV2.prompt({classes: ["sbp-dialog"], window: {title: `Edit Timer · ${timerName(effect)}`}, content, rejectClose: false,
             ok: {label: "Save", callback: (_event, submit) => {
               const fields = submit.form.elements;
               return editPowerTimer(effect, {value: fields.value.valueAsNumber, units: fields.units.value, elapsed: fields.elapsed.valueAsNumber});

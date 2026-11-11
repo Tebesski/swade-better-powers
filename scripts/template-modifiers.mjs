@@ -105,7 +105,7 @@ export function reconcileTemplateRaises(power, templates, source = "setting") {
 }
 
 export function templateModifierPatch(item, update = {}) {
-  if (item.type !== "power" || !enabled()) return null;
+  if (item.type !== "power" || !enabled(item)) return null;
   const get = path => foundry.utils.getProperty(update, path);
   const oldSetting = list(readPowerFlag(item, "powerModifiers"));
   const automation = item.getFlag(TEMPLATES_ID, "automation");
@@ -161,7 +161,7 @@ export function templateModifierPatch(item, update = {}) {
 }
 
 export function syncTemplateModifierUpdate(item, changed) {
-  if (!enabled()) return;
+  if (!enabled(item)) return;
   const update = foundry.utils.expandObject(changed);
   if (![POWER_MODIFIERS, TEMPLATE_MODIFIERS, POWER_RAISES, TEMPLATE_RAISES]
     .some(path => Array.isArray(foundry.utils.getProperty(update, path)))) return;

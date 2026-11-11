@@ -43,20 +43,40 @@
   {{/each}}
   {{#if showAdd}}
   {{#if @root.editable}}
-    <button type="button" class="sbs-add-option" data-modifier-action="addBehavior"><i class="fa-solid fa-plus" inert></i> Add behavior</button>
+    <button type="button" class="sbs-add-option" data-modifier-action="addBehavior"><i class="fa-solid fa-plus" inert></i> {{#if addLabel}}{{addLabel}}{{else}}Add behavior{{/if}}</button>
   {{/if}}
   {{/if}}
 {{/inline}}
 
-<div class="sbs-modifiers-heading"><h3>Modifiers</h3>{{#if editable}}<button type="button" data-modifier-action="add"><i class="fa-solid fa-plus" inert></i> Add modifier</button>{{/if}}</div>
+{{#if libraryOption}}
+  {{> powerBehaviors libraryOption showAdd=true addLabel="Add Power Modifier"}}
+{{else}}
+<div class="sbs-modifiers-heading"><h3>Modifiers</h3>{{#if editable}}<div class="sbp-modifier-buttons"><button type="button" data-modifier-action="add"><i class="fa-solid fa-plus" inert></i> Add modifier</button><button type="button" data-modifier-action="pickLibrary" data-tooltip="Choose an individual modifier" aria-label="Choose an individual modifier"><i class="fa-solid fa-list" inert></i></button></div>{{/if}}</div>
 {{#each modifiers}}
 <details class="sbs-modifier" data-id="{{id}}" {{#if expanded}}open{{/if}}>
-  <summary class="sbs-modifier-name"><input type="text" data-field="name" value="{{name}}" placeholder="Modifier name" aria-label="Modifier name" {{#unless @root.editable}}disabled{{/unless}}>{{#if @root.editable}}<a role="button" tabindex="0" data-modifier-action="remove" title="Delete modifier"><i class="fa-solid fa-trash" inert></i></a>{{/if}}<a role="button" tabindex="0" data-modifier-action="toggle" aria-label="Expand modifier" aria-expanded="{{expanded}}"><i class="fa-solid fa-chevron-down" inert></i></a></summary>
+  <summary class="sbs-modifier-name">
+    {{#if @root.canSaveToLibrary}}<span class="sbp-modifier-drag" draggable="true" data-modifier-drag title="Drag to Modifiers Compendium"><i class="fa-solid fa-grip-vertical" inert></i></span>{{/if}}
+    <input type="text" data-field="name" value="{{name}}" placeholder="Modifier name" aria-label="Modifier name" {{#unless @root.editable}}disabled{{/unless}}>
+    {{#if @root.editable}}
+      {{#if @root.canSaveToLibrary}}<a role="button" tabindex="0" data-modifier-action="saveToLibrary" title="Add to Modifiers Compendium" aria-label="Add to Modifiers Compendium"><i class="fa-solid fa-book" inert></i></a>{{/if}}
+      <a role="button" tabindex="0" data-modifier-action="remove" title="Delete modifier"><i class="fa-solid fa-trash" inert></i></a>
+    {{/if}}
+    <a role="button" tabindex="0" data-modifier-action="toggle" aria-label="Expand modifier" aria-expanded="{{expanded}}"><i class="fa-solid fa-chevron-down" inert></i></a>
+  </summary>
   <div class="sbs-modifier-body">
     <div class="editor-container sbs-modifier-description"><prose-mirror name="sbs-modifier-{{id}}" value="{{description}}" data-placeholder="Description..." editable="{{@root.editable}}" toggled>{{{description}}}</prose-mirror></div>
     {{#each options}}
       <div class="sbp-modifier-option" data-option-id="{{id}}">
-        <div class="sbs-cost-option" data-id="{{id}}"><input type="text" data-field="label" value="{{label}}" placeholder="Option name" aria-label="Option name" {{#unless @root.editable}}disabled{{/unless}}><span class="sbs-option-cost">(<span contenteditable="{{@root.editable}}" role="textbox" inputmode="decimal" data-field="cost" data-placeholder="N" aria-label="Modifier cost">{{costText}}</span>)</span>{{#if @root.editable}}<button type="button" class="sbp-add-behavior-icon" data-modifier-action="addBehavior" title="Add behavior" aria-label="Add behavior"><i class="fa-solid fa-list-check" inert></i></button><a role="button" tabindex="0" data-modifier-action="removeOption" title="Delete option"><i class="fa-solid fa-xmark" inert></i></a>{{/if}}</div>
+        <div class="sbs-cost-option" data-id="{{id}}">
+          <input type="text" data-field="label" value="{{label}}" placeholder="Option name" aria-label="Option name" {{#unless @root.editable}}disabled{{/unless}}>
+          <span class="sbs-option-cost">(<span contenteditable="{{@root.editable}}" role="textbox" inputmode="decimal" data-field="cost" data-placeholder="N" aria-label="Modifier cost">{{costText}}</span>)</span>
+          {{#if @root.editable}}
+            <button type="button" class="sbp-add-behavior-icon" data-modifier-action="addBehavior" title="Add behavior" aria-label="Add behavior"><i class="fa-solid fa-list-check" inert></i></button>
+            {{#if removable}}
+              <a role="button" tabindex="0" data-modifier-action="removeOption" title="Delete option" aria-label="Delete option"><i class="fa-solid fa-xmark" inert></i></a>
+            {{/if}}
+          {{/if}}
+        </div>
         {{> powerBehaviors}}
       </div>
     {{/each}}
@@ -64,6 +84,7 @@
   </div>
 </details>
 {{/each}}
+
 
 <div class="sbs-modifiers-heading"><h3>Raises</h3>{{#if editable}}<button type="button" data-modifier-action="addRaise"><i class="fa-solid fa-plus" inert></i> Add raise</button>{{/if}}</div>
 {{#each raises}}
@@ -76,3 +97,4 @@
     {{> powerBehaviors showAdd=true}}
   </details>
 {{/each}}
+{{/if}}

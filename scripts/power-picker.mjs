@@ -1,3 +1,4 @@
+import {isBasicSwadePack} from "../../swade-better-setting/scripts/compendium-sources.mjs";
 import {MODULE_ID, normalizeName, powerData} from "./constants.mjs";
 import {entryArcane, spellcastingEntries} from "./powers-data.mjs";
 import {owned, queueActor} from "./spellcasting.mjs";
@@ -47,7 +48,8 @@ export class PowerPicker extends HandlebarsApplicationMixin(ApplicationV2) {
     const context = await super._prepareContext(options);
     if (!this.sources) {
       const world = game.items.filter(item => item.type === "power" && item.visible).map(item => ({name: item.name, img: item.img, uuid: item.uuid}));
-      const packs = game.packs.filter(pack => pack.documentName === "Item" && pack.visible && pack.collection !== "swade.powers");
+      const packs = game.packs.filter(pack => pack.documentName === "Item" && pack.visible &&
+        !isBasicSwadePack(pack) && pack.collection !== "world.better-setting-modifiers");
       const results = await Promise.allSettled(packs.map(async pack => ({label: pack.title, rows: (await pack.getIndex({fields: ["type"]})).filter(item => item.type === "power").map(item => ({name: item.name, img: item.img, uuid: pack.getUuid(item._id)}))})));
       this.sources = [{label: "World Powers", rows: world}, ...results.filter(r => r.status === "fulfilled").map(r => r.value)].filter(group => group.rows.length);
       for (const source of this.sources) source.rows.sort((a,b) => a.name.localeCompare(b.name));

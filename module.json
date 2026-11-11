@@ -18,12 +18,8 @@
             }
          }
       ],
+      "requires": [{ "id": "swade-better-setting", "type": "module" }],
       "recommends": [
-         {
-            "id": "swade-better-setting",
-            "type": "module",
-            "reason": "Use the shared skill library to choose casting traits."
-         },
          {
             "id": "swade-better-effects",
             "type": "module",

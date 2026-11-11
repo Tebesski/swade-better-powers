@@ -1,3 +1,4 @@
+import {isBasicSwadePack} from "../../swade-better-setting/scripts/compendium-sources.mjs";
 import {EFFECTS_ID} from "./constants.mjs";
 import {isDurationTracker} from "./maintenance.mjs";
 
@@ -26,13 +27,13 @@ export async function pickEffect() {
   for (const actor of game.actors.filter(actor => actor.visible)) {
     addGroup(actor.name, [...embedded(actor), ...actor.items.flatMap(item => embedded(item))]);
   }
-  const packs = game.packs.filter(pack => pack.documentName === "Item" && pack.visible);
+  const packs = game.packs.filter(pack => pack.documentName === "Item" && pack.visible && !isBasicSwadePack(pack));
   const results = await Promise.allSettled(packs.map(async pack => {
     const index = await pack.getIndex({fields: ["type", "effects"]});
     return [pack.title, index.contents.flatMap(doc => embedded(doc, pack.getUuid(doc._id)))];
   }));
   for (const result of results) if (result.status === "fulfilled") addGroup(...result.value);
-  return foundry.applications.api.DialogV2.prompt({window: {title: "Choose an effect"}, content: options.outerHTML,
+  return foundry.applications.api.DialogV2.prompt({classes: ["sbp-dialog"], window: {title: "Choose an effect"}, content: options.outerHTML,
     ok: {label: "Choose", callback: (_event, button) => button.form.elements.reference.value}, rejectClose: false});
 }
 

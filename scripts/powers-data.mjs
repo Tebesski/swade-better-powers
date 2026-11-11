@@ -62,7 +62,17 @@ export function normalizeModifiers(modifiers = []) {
   })}));
 }
 
-export const getModifiers = item => normalizeModifiers(readPowerFlag(item, "powerModifiers") ?? []);
+export const getLocalModifiers = item => normalizeModifiers(readPowerFlag(item, "powerModifiers") ?? []);
+
+export function getGlobalModifiers(item, local = getLocalModifiers(item)) {
+  const setting = globalThis.game?.modules?.get?.("swade-better-setting");
+  return normalizeModifiers(setting?.active ? setting.api?.getGlobalModifiers?.(item, "powers", local) ?? [] : []);
+}
+
+export function getModifiers(item) {
+  const local = getLocalModifiers(item);
+  return [...local, ...getGlobalModifiers(item, local)];
+}
 
 export function normalizePowerRaises(raises) {
   const levels = new Set();

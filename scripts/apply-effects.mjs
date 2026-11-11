@@ -143,7 +143,7 @@ async function chooseOptions(item, config, choices) {
       }))
     }))
   });
-  return foundry.applications.api.DialogV2.prompt({window: {title: `Cast Options · ${item.name}`}, content,
+  return foundry.applications.api.DialogV2.prompt({classes: ["sbp-dialog"], window: {title: `Cast Options · ${item.name}`}, content,
     ok: {label: "Save", callback: (_event, button) => ({
       raised: button.form.elements.raised?.checked ?? false,
       modifierOptions: Object.fromEntries([...button.form.querySelectorAll("[data-effect-modifier]")]

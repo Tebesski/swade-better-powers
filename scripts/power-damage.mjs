@@ -1,3 +1,4 @@
+import {applyDamageAdjustment, damagePlan, damageState} from "../../swade-better-setting/scripts/damage-dice.mjs";
 import {report, wrapMethod} from "./constants.mjs";
 import {getCast, getPowerDamageChanges} from "./cast-results.mjs";
 import {TEMPLATES_ID} from "./template-modifiers.mjs";
@@ -6,45 +7,22 @@ const templates = () => game.modules.get(TEMPLATES_ID)?.api;
 const pending = new WeakMap();
 const BONUS = "sbpExplicitBonus";
 const PLAN = "sbpDamagePlan";
-const dieTypes = [4, 6, 8, 10, 12];
-const formulaWithBonuses = ({base, bonuses}) => bonuses.reduce((formula, bonus) => `(${formula}) + (${bonus})`, base);
-
-function increaseDice(formula, steps) {
-  if (!steps) return formula;
-  return formula.replace(/\[[^\]]*\]|@[\p{L}\p{N}_]+(?:[-.][\p{L}\p{N}_]+)*|(?<![\p{L}\p{N}_@.])(\d*)d(\d+)(?![\d.])/giu, (term, count, sides) => {
-    const index = dieTypes.indexOf(Number(sides));
-    return index < 0 ? term : `${count}d${dieTypes[Math.min(dieTypes.length - 1, index + steps)]}`;
-  });
+function dieAmount(formula, actor, max) {
+  const expression = Roll.replaceFormulaData(String(formula), actor.getRollData()).trim().replaceAll("^", "**");
+  if (!expression || !/^[\d\s.+*/%()-]+$/.test(expression) || /\/[/\*]/.test(expression)) throw new Error(`Invalid die step formula: ${formula}`);
+  const number = Number(expression);
+  const value = Number.isFinite(number) ? number : Roll.safeEval(expression);
+  if (!Number.isFinite(value)) throw new Error(`Invalid die step formula: ${formula}`);
+  return Math.max(0, Math.min(max, Math.floor(value)));
 }
 
-// Better Templates provides this projection when enabled. Keep the native dice behavior when Powers runs alone.
+// This path also runs in worlds where Better Templates is disabled.
 function localProjection(changes, base, actor) {
-  const state = {base, bonuses: [], adjustments: []};
-  let allSteps = 0;
+  const state = damageState(base);
   for (const {source, change} of changes) {
-    const {system} = change;
-    const add = change.type === "addDamageDice";
-    const all = system.scope === "all";
-    const display = () => add || all ? formulaWithBonuses(state) : state.base;
-    const before = display();
-    if (add) {
-      if (system.formula.trim()) state.bonuses.push(increaseDice(system.formula.trim(), allSteps));
-    } else {
-      const expression = Roll.replaceFormulaData(system.steps, actor.getRollData()).trim().replaceAll("^", "**");
-      if (!/^[\d\s.+*/%()-]+$/.test(expression) || /\/[/\*]/.test(expression)) throw new Error(`Invalid die step formula: ${system.steps}`);
-      const value = Number(expression) || Roll.safeEval(expression);
-      if (!Number.isFinite(value)) throw new Error(`Invalid die step formula: ${system.steps}`);
-      const steps = Math.max(0, Math.min(4, Math.floor(value)));
-      state.base = increaseDice(state.base, steps);
-      if (all) {
-        allSteps = Math.min(4, allSteps + steps);
-        state.bonuses = state.bonuses.map(bonus => increaseDice(bonus, steps));
-      }
-    }
-    const after = display();
-    if (before !== after) state.adjustments.push({source, label: change.label || (add ? "Add Damage Dice" : "Increase Die Type"), before, after});
+    applyDamageAdjustment(state, change, source, (formula, max) => dieAmount(formula, actor, max));
   }
-  return {...state, formula: formulaWithBonuses(state)};
+  return damagePlan(state);
 }
 
 function damageMods(item, plan) {

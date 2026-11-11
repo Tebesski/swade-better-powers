@@ -1,5 +1,5 @@
 import {effectsAPI, readPowerFlag, MODULE_ID} from "./constants.mjs";
-import {escapeHTML, getModifiers, getPowerRaises, modifierCostLabel, modifierSummary, normalizeModifiers, normalizePowerRaises, validateModifiers} from "./powers-data.mjs";
+import {escapeHTML, getLocalModifiers, getPowerRaises, modifierCostLabel, modifierSummary, normalizeModifiers, normalizePowerRaises, validateModifiers} from "./powers-data.mjs";
 import {BEHAVIORS, behaviorFieldValue, behaviorSystem, isCodeBehavior} from "./behavior-data.mjs";
 import {trustPowerBehaviors} from "./behavior-code.mjs";
 import {effectReference, pickEffect} from "./effect-sources.mjs";
@@ -11,6 +11,30 @@ export function descriptionWithModifiers(description, modifiers) {
   container.innerHTML = description ?? "";
   container.querySelectorAll(".sbs-power-modifier-summary").forEach(el => el.remove());
   return container.innerHTML + modifierSummary(normalizeModifiers(modifiers));
+}
+
+export async function separateModifierDescription(item, parts) {
+  if (item.type !== "power") return;
+  for (const part of Object.values(parts)) {
+    const editor = part?.querySelector?.('prose-mirror[name="system.description"]');
+    if (!editor) continue;
+    const content = document.createElement("div");
+    content.innerHTML = editor.querySelector(".editor-content")?.innerHTML ?? editor.innerHTML;
+    const legacy = content.querySelector(".sbs-power-modifier-summary");
+    const summary = legacy?.outerHTML ?? modifierSummary(getLocalModifiers(item));
+    if (!summary) continue;
+    legacy?.remove();
+    const replacement = customElements.get("prose-mirror").create({
+      name: editor.getAttribute("name"), toggled: true,
+      value: descriptionWithModifiers(item.system.description, []), enriched: content.innerHTML
+    });
+    for (const {name, value} of editor.attributes) if (name !== "value") replacement.setAttribute(name, value);
+    const display = document.createRange().createContextualFragment(legacy ? summary :
+      await foundry.applications.ux.TextEditor.implementation.enrichHTML(summary, {relativeTo: item, secrets: item.isOwner}));
+    display.querySelector(".sbs-power-modifier-summary > h3")?.classList.add("additional-stats-header");
+    editor.parentElement.classList.add("sbp-readonly-summary");
+    editor.replaceWith(replacement, display);
+  }
 }
 
 function queuePowerUpdate(item, update) {
@@ -49,9 +73,33 @@ export async function syncModifierEffects(item) {
   if (remove.length) await item.deleteEmbeddedDocuments("ActiveEffect", remove);
 }
 
-export async function renderPowerModifiers(app, root) {
-  if (app.document?.type !== "power" || root.querySelector(".sbs-modifiers-tab")) return;
-  const state = app.sbsModifierView ??= {scrollTop: 0, expanded: new Set(), expandedDetails: new Set()};
+const modifierView = app => app.sbsModifierView ??= {scrollTop: 0, expanded: new Set(), expandedDetails: new Set()};
+
+export function openModifierEditor(item, id) {
+  const sheet = item.sheet;
+  modifierView(sheet).expanded.add(id);
+  sheet.tabGroups.main = "modifiers";
+  return sheet.render({force: true});
+}
+
+export function renderLibraryBehaviors(root, modifier, optionId, onSave) {
+  const library = {modifier, optionId, onSave, saves: Promise.resolve()};
+  root.classList.add("sbp-library-automation");
+  const app = {isEditable: true, render: async () => {
+    if (!root.isConnected) return;
+    root.replaceChildren();
+    await renderPowerModifiers(app, root, library);
+  }};
+  return app.render();
+}
+
+const settingAPI = () => game.modules.get("swade-better-setting").api;
+
+export async function renderPowerModifiers(app, root, library) {
+  if ((!library && app.document?.type !== "power") || root.querySelector(".sbs-modifiers-tab")) return;
+  const state = modifierView(app);
+  const setting = settingAPI();
+  const catalog = Boolean(library);
   const storedChanges = new Map();
   const showChanges = changes => (changes ?? []).map((change, index) => {
     storedChanges.set(change.id, change);
@@ -63,21 +111,27 @@ export async function renderPowerModifiers(app, root) {
         value: behaviorFieldValue(change, field), select: field.type === "select", checkbox: field.type === "checkbox",
         textarea: field.type === "textarea", effect: field.type === "effect", drop: ["effect", "macro"].includes(field.type)}))};
   });
-  const modifiers = getModifiers(app.document);
+  const modifiers = library ? normalizeModifiers([library.modifier]) : getLocalModifiers(app.document);
   for (const modifier of modifiers) {
     modifier.expanded = state.expanded.has(modifier.id);
-    modifier.options = modifier.options.map(option => ({...option, changes: showChanges(option.changes), costText: option.cost ? modifierCostLabel(option) : ""}));
+    const removable = modifier.options.length > 1;
+    modifier.options = modifier.options.map(option => ({...option, removable, changes: showChanges(option.changes),
+      costText: option.cost ? modifierCostLabel(option) : ""}));
   }
-  const raises = getPowerRaises(app.document).map(raise => ({...raise, expanded: state.expandedDetails.has(raise.id), changes: showChanges(raise.changes)}));
+  const raises = (catalog ? [] : getPowerRaises(app.document)).map(raise => ({...raise, expanded: state.expandedDetails.has(raise.id), changes: showChanges(raise.changes)}));
   const section = document.createElement("section");
-  section.className = `tab scrollable sbs-modifiers-tab ${app.tabGroups.main === "modifiers" ? "active" : ""}`;
+  section.className = catalog ? "sbp-library-behaviors" : "tab scrollable sbs-modifiers-tab";
+  const libraryOption = library && modifiers[0].options.find(option => option.id === library.optionId);
+  if (library && !libraryOption) return;
   section.dataset.group = "main";
   section.dataset.tab = "modifiers";
   section.innerHTML = await foundry.applications.handlebars.renderTemplate(`modules/${MODULE_ID}/templates/power-modifiers.hbs`, {
-    modifiers, raises, editable: app.isEditable, canEditEffects: Boolean(effectsAPI()?.editEffectSource && Item.canUserCreate(game.user))
+    modifiers, raises, libraryOption, editable: app.isEditable,
+    canSaveToLibrary: !catalog && game.user.isGM && Boolean(setting?.saveModifierToLibrary),
+    canEditEffects: Boolean(effectsAPI()?.editEffectSource && Item.canUserCreate(game.user))
   });
-  section.classList.toggle("active", app.tabGroups.main === "modifiers");
-  root.querySelector(".sheet-body")?.append(section);
+  if (!catalog) section.classList.toggle("active", app.tabGroups.main === "modifiers");
+  (catalog ? root : root.querySelector(".sheet-body"))?.append(section);
   // Foundry restores native part scroll before this asynchronously rendered tab exists.
   const restoreScroll = () => {if (section.isConnected && section.classList.contains("active")) section.scrollTop = state.scrollTop;};
   restoreScroll();
@@ -119,24 +173,47 @@ export async function renderPowerModifiers(app, root) {
     });
     return {id, type, enabled: input("enabled").checked, label: input("behaviorLabel").value.trim(), system: {...previous?.system, ...system}};
   });
-  const captureModifiers = () => [...section.querySelectorAll(".sbs-modifier")].map(row => ({
-    id: row.dataset.id, name: row.querySelector('[data-field="name"]').value,
-    description: row.querySelector("prose-mirror").value,
-    options: [...row.querySelectorAll(".sbs-cost-option")].map(option => ({id: option.dataset.id,
-      label: option.querySelector('[data-field="label"]').value,
-      cost: Number(option.querySelector('[data-field="cost"]').textContent.trim() || 0),
-      changes: captureChanges(option.closest(".sbp-modifier-option"))}))
-  }));
+  const captureModifiers = () => {
+    if (library) return [{...library.modifier, options: library.modifier.options.map(option => option.id === library.optionId
+      ? {...option, changes: captureChanges(section)} : option)}];
+    return [...section.querySelectorAll(".sbs-modifier")].map(row => ({
+      id: row.dataset.id, name: row.querySelector('[data-field="name"]').value,
+      description: row.querySelector("prose-mirror").value,
+      options: [...row.querySelectorAll(".sbs-cost-option")].map(option => ({
+        id: option.dataset.id, label: option.querySelector('[data-field="label"]').value,
+        cost: Number(option.querySelector('[data-field="cost"]').textContent.trim() || 0),
+        changes: captureChanges(option.closest(".sbp-modifier-option"))
+      }))
+    }));
+  };
   const captureRaises = () => [...section.querySelectorAll(".sbp-raise")].map(row => ({id: row.dataset.id,
     level: row.querySelector('[data-field="level"]').valueAsNumber, changes: captureChanges(row)}));
-  const save = async (isRaise, mutate = () => {}) => {
+  const save = async (isRaise, mutate) => {
     state.scrollTop = section.scrollTop;
     try {
       const definitions = isRaise ? captureRaises() : captureModifiers();
-      mutate(definitions);
-      await (isRaise ? savePowerRaises(app.document, definitions) : savePowerModifiers(app.document, definitions));
+      mutate?.(definitions);
+      if (library) {
+        const modifier = normalizeModifiers(definitions)[0];
+        const changes = modifier.options.find(option => option.id === library.optionId).changes ?? [];
+        library.modifier = modifier;
+        const save = library.saves.then(async () => {
+          await trustPowerBehaviors(changes);
+          await library.onSave(changes);
+        });
+        library.saves = save.catch(() => {});
+        // Rebuild only this option's behavior controls after a structural change.
+        if (mutate) await app.render();
+        await save;
+      } else await (isRaise ? savePowerRaises(app.document, definitions) : savePowerModifiers(app.document, definitions));
     } catch (error) { ui.notifications.error(error.message); }
   };
+  if (!catalog && app.isEditable) {
+    section.addEventListener("dragstart", event => {
+      const handle = event.target.closest("[data-modifier-drag]");
+      if (handle) setting.writeModifierDrag(event, "power", handle.closest(".sbs-modifier").dataset.id, app.document.uuid);
+    });
+  }
   section.addEventListener("change", event => { event.stopPropagation(); if (app.isEditable) void save(Boolean(event.target.closest(".sbp-raise"))); });
   section.addEventListener("dragover", event => {
     if (event.target.matches("[data-behavior-drop]:enabled")) event.preventDefault();
@@ -184,14 +261,34 @@ export async function renderPowerModifiers(app, root) {
     }
     if (!app.isEditable) return;
     const action = button.dataset.modifierAction;
+    if (action === "pickLibrary") return setting.openModifierLibrary({item: app.document});
     const raise = button.closest(".sbp-raise");
     const isRaise = Boolean(raise || action === "addRaise");
-    const id = (raise ?? button.closest(".sbs-modifier"))?.dataset.id;
+    const id = library?.modifier.id ?? (raise ?? button.closest(".sbs-modifier"))?.dataset.id;
+    if (action === "remove") {
+      try {
+        const modifier = getLocalModifiers(app.document).find(row => row.id === id);
+        if (!modifier || !await foundry.applications.api.DialogV2.confirm({
+          classes: ["sbp-dialog"], window: {title: "Remove modifier"}, rejectClose: false,
+          content: `<p>Remove “${escapeHTML(modifier.name)}” from this power?</p>`
+        })) return;
+        await pending.get(app.document.uuid)?.catch(() => {});
+        await savePowerModifiers(app.document, getLocalModifiers(app.document).filter(row => row.id !== id));
+      } catch (error) { ui.notifications.error(error.message); }
+      return;
+    }
+    if (action === "saveToLibrary") {
+      try {
+        await pending.get(app.document.uuid);
+        await setting.saveModifierToLibrary(app.document, id);
+      } catch (error) { ui.notifications.error(error.message); }
+      return;
+    }
     const option = () => ({id: foundry.utils.randomID(), label: "", cost: 0});
     let added;
     if (action === "addBehavior") {
       const types = Object.entries(BEHAVIORS).filter(([, def]) => !def.code || game.user.isGM);
-      added = await foundry.applications.api.DialogV2.prompt({window: {title: "Add power behavior"}, rejectClose: false,
+      added = await foundry.applications.api.DialogV2.prompt({classes: ["sbp-dialog"], window: {title: "Add power behavior"}, rejectClose: false,
         content: `<label>Behavior <select name="behavior">${types.map(([key, def]) => `<option value="${key}">${escapeHTML(def.label)}</option>`).join("")}</select></label>`,
         ok: {label: "Add", callback: (_event, target) => target.form.elements.behavior.value}});
       if (!added || !section.isConnected) return;
@@ -210,7 +307,7 @@ export async function renderPowerModifiers(app, root) {
     if (action === "editBehaviorEffect") {
       try {
         const behavior = storedChanges.get(button.closest(".sbp-power-behavior").dataset.id);
-        effectSource = await effectsAPI()?.editEffectSource(behavior.system.effects?.[effectIndex], `${app.document.name} — Caster Effect`);
+        effectSource = await effectsAPI()?.editEffectSource(behavior.system.effects?.[effectIndex], `${app.document?.name ?? library.modifier.name} — Caster Effect`);
         if (!effectSource || !section.isConnected) return;
       } catch (error) { ui.notifications.error(error.message); return; }
     }
@@ -219,20 +316,23 @@ export async function renderPowerModifiers(app, root) {
       switch (action) {
         case "add": definitions.push({id: foundry.utils.randomID(), name: "New modifier", description: "", options: [option()]}); break;
         case "addRaise": definitions.push({id: foundry.utils.randomID(), level: Math.max(0, ...definitions.map(row => row.level)) + 1, changes: []}); break;
-        case "remove":
         case "removeRaise": definitions.splice(definitions.indexOf(variant), 1); break;
         case "addOption": variant.options.push(option()); break;
-        case "removeOption": variant.options = variant.options.filter(o => o.id !== button.closest(".sbs-cost-option").dataset.id); break;
+        case "removeOption":
+          if (variant.options.length > 1) variant.options = variant.options.filter(o => o.id !== button.closest(".sbs-cost-option").dataset.id);
+          break;
         case "addBehavior":
         case "moveBehaviorUp":
         case "moveBehaviorDown":
         case "editBehaviorEffect":
         case "removeBehaviorEffect":
         case "removeBehavior": {
-          const parent = isRaise ? variant : variant.options.find(o => o.id === button.closest(".sbp-modifier-option").dataset.optionId);
-          if (added) parent.changes.push({id: foundry.utils.randomID(), type: added, enabled: true,
-            label: "", system: behaviorSystem(added, field => field.value)});
-          else {
+          const parent = isRaise ? variant : variant.options.find(o => o.id === (library?.optionId ?? button.closest(".sbp-modifier-option").dataset.optionId));
+          if (added) {
+            const id = foundry.utils.randomID();
+            parent.changes.push({id, type: added, enabled: true, label: "", system: behaviorSystem(added, field => field.value)});
+            state.expandedDetails.add(id);
+          } else {
             const index = parent.changes.findIndex(change => change.id === button.closest(".sbp-power-behavior").dataset.id);
             if (index < 0) break;
             if (action === "removeBehavior") parent.changes.splice(index, 1);
@@ -254,7 +354,33 @@ export async function renderPowerModifiers(app, root) {
   });
 }
 
+const descriptionLayouts = new WeakMap();
+
+export function alignModifierDescription(app, root) {
+  descriptionLayouts.get(app)?.disconnect();
+  descriptionLayouts.delete(app);
+  const container = root.querySelector(".sbp-readonly-summary");
+  const heading = root.querySelector(".sheet-sidebar .additional-stats-header");
+  const divider = heading?.previousElementSibling;
+  if (!container || !divider?.matches("hr")) return;
+
+  const align = () => {
+    if (!container.getClientRects().length) return;
+    const offset = divider.getBoundingClientRect().top - container.getBoundingClientRect().top;
+    container.style.setProperty("--sbp-description-split", `${offset}px`);
+  };
+  const observer = new ResizeObserver(align);
+  observer.observe(container);
+  for (const child of heading.parentElement.children) observer.observe(child);
+  descriptionLayouts.set(app, observer);
+  align();
+}
+
 export function installModifierDescriptionHook() {
+  Hooks.on("closeApplicationV2", app => {
+    descriptionLayouts.get(app)?.disconnect();
+    descriptionLayouts.delete(app);
+  });
   Hooks.on("preCreateItem", item => {
     const patch = templateModifierPatch(item);
     if (!patch) return;
@@ -273,4 +399,22 @@ export function installModifierDescriptionHook() {
       if (changed.system) delete changed.system.description;
     }
   });
+}
+
+export function enableLibraryDrop(app, root) {
+  if (!app.isEditable || root.dataset.sbpLibraryDrop) return;
+  root.dataset.sbpLibraryDrop = "true";
+  const setting = settingAPI();
+  root.addEventListener("dragover", event => {
+    if (!setting.hasModifierDrag(event)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+  });
+  root.addEventListener("drop", event => {
+    if (!setting.hasModifierDrag(event)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const drop = setting.readModifierDrag(event);
+    if (drop?.source === "library" && drop.id) void setting.applyLibraryModifier(app.document, drop.id).catch(error => ui.notifications.error(error.message));
+  }, {capture: true});
 }

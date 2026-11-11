@@ -94,6 +94,7 @@ async function resolveExpiration(effect) {
   const content = document.createElement("p");
   content.textContent = `${name} is expired. You can choose to maintain it. For every maintenance period you want to sustain it, you suffer a cumulative −1 penalty to all subsequent arcane skill rolls.`;
   const extend = await foundry.applications.api.DialogV2.confirm({
+    classes: ["sbp-dialog"],
     window: {title: "Maintain Power"}, content: content.outerHTML,
     yes: {label: "Maintain", default: false}, no: {label: "Let Expire", default: true}, rejectClose: false,
     render: (_event, dialog) => {
