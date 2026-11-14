@@ -16,6 +16,7 @@ const castingBreakdown = (power, selected, total) => powerPointBreakdown(power.n
   selectedChoices(power, selected).map(({modifier, option}) => ({name: `${modifier.name}${option.label ? ` — ${option.label}` : ""}`, cost: option.cost})), total);
 
 function buildChooser(power, selected, changed) {
+  const noPowerPoints = noPP(power);
   const panel = document.createElement("div");
   panel.className = "sbs-casting-modifiers";
   const presets = document.createElement("div"); presets.className = "presets sbs-power-presets";
@@ -29,7 +30,7 @@ function buildChooser(power, selected, changed) {
     chips.replaceChildren();
     for (const {modifier, option} of selectedChoices(power, selected)) {
       const button = document.createElement("button"); button.type = "button";
-      button.textContent = `${modifier.name}: ${option.label || modifier.name} (${modifierCostLabel(option)}) ×`;
+      button.textContent = `${modifier.name}: ${option.label || modifier.name} (${modifierCostLabel(option, noPowerPoints)}) ×`;
       button.title = "Remove this modifier from this casting";
       button.addEventListener("click", event => {event.preventDefault(); event.stopPropagation(); selected.delete(modifier.id); changed(); refresh();});
       chips.append(button);
@@ -41,7 +42,7 @@ function buildChooser(power, selected, changed) {
     for (const option of modifier.options) {
       const row = document.createElement("li"); row.className = "modifier"; row.dataset.group = modifier.id;
       const button = document.createElement("button"); button.type = "button"; button.className = "add-preset";
-      button.textContent = `${option.label || modifier.name} (${modifierCostLabel(option)})`;
+      button.textContent = `${option.label || modifier.name} (${modifierCostLabel(option, noPowerPoints)})`;
       button.dataset.modifierId = modifier.id; button.dataset.optionId = option.id;
       button.addEventListener("click", event => {
         event.preventDefault(); event.stopPropagation(); selected.set(modifier.id, option.id);

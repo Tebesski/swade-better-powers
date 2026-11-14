@@ -106,7 +106,7 @@ try {
   });
   const roll = page.locator(".swade.roll-dialog");
   await roll.getByRole("button", {name: "Choose a Power Modifier"}).click();
-  await roll.getByRole("button", {name: "Extended (+1)", exact: true}).click();
+  await roll.getByRole("button", {name: "Extended (-1)", exact: true}).click();
   await roll.getByRole("button", {name: "Roll", exact: true}).click();
   await page.waitForFunction(() => {
     const {actor, powers} = durationQA;

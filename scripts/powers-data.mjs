@@ -35,6 +35,7 @@ export function usesNoPowerPoints(power, worldDefault = false) {
   const entry = entryForPower(power);
   return entry?.noPowerPoints ?? worldDefault;
 }
+export const noPP = power => power?.type === "power" && usesNoPowerPoints(power, game.settings.get("swade", "noPowerPoints"));
 export function castingPenalty(cost, maintained = 0) {
   const penalty = Math.ceil(Math.max(0, Number(cost) || 0) / 2) + Math.max(0, Number(maintained) || 0);
   return -penalty;
@@ -48,8 +49,12 @@ export function powerPointBreakdown(name, baseCost, choices = [], totalCost = Nu
   const expression = totalCost < 0 ? `max(0, (${terms}))` : `(${terms})`;
   return {costs, total, penalty: castingPenalty(total), formula: `${expression} / 2 = ${castingPenalty(total) || 0}`};
 }
-export function modifierCostLabel(option) {
-  const signed = value => Number(value) > 0 ? `+${Number(value)}` : String(Number(value) || 0);
+export function modifierCostLabel(option, noPP = false) {
+  const signed = value => {
+    const cost = Number(value) || 0;
+    const display = noPP ? -Math.ceil(cost / 2) : cost;
+    return display > 0 ? `+${display}` : String(display);
+  };
   if (option.cost !== undefined) return signed(option.cost);
   return Number(option.min) === Number(option.max) ? signed(option.min) : `${signed(option.min)} to ${signed(option.max)}`;
 }
@@ -102,10 +107,10 @@ export function validateModifiers(modifiers) {
   }
   return modifiers;
 }
-export function modifierSummary(modifiers) {
+export function modifierSummary(modifiers, noPP = false) {
   if (!modifiers.length) return "";
   const rows = modifiers.map(modifier => {
-    const costs = modifier.options.map(modifierCostLabel).join(" / ");
+    const costs = modifier.options.map(option => modifierCostLabel(option, noPP)).join(" / ");
     // Put the first paragraph beside the name, preserving further rich-text blocks.
     const description = (modifier.description || "").trim().replace(/^<p(?:\s[^>]*)?>([\s\S]*?)<\/p>/i, "$1");
     return `<li><strong>${escapeHTML(modifier.name)} (${costs}):</strong> ${description}</li>`;

@@ -35,9 +35,14 @@
 .sbs-powers .sbs-power-list { margin: 12px 0; padding: 0; list-style: none; }
 .sbs-powers .sbs-power { display: list-item !important; border-bottom: 1px solid var(--color-border-light-primary); padding: 5px 0; }
 .application.sheet.swade .sbs-powers .sbs-power > details > summary { display: flex; align-items: center; gap: 8px; cursor: var(--cursor-pointer, pointer); min-height: 38px; list-style: none; }
+.application.sheet.swade .sbs-powers .sbs-power-icon {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
 .sbs-power summary .name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .sbs-power .item-controls { display: flex; gap: 10px; }
-.sbs-power-img { width: 32px; height: 32px; border: 0; cursor: var(--cursor-pointer, pointer); }
 .sbs-power-description { padding: 8px; }
 .sbs-entry-empty { padding: 14px 8px; opacity: .6; font-style: italic; }
 .sbs-casting-cost { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px; }

@@ -125,7 +125,7 @@ try {
     syncQA.roll = withPowerCastCard(syncQA.power, mods, () => syncQA.actor.rollSkill(syncQA.skill.id, {item: syncQA.power, additionalMods: mods}));
   });
   await page.locator(".sbs-power-presets .toggle-list").click();
-  await page.getByRole("button", {name: "Wide (+5)", exact: true}).click();
+  await page.getByRole("button", {name: "Wide (-3)", exact: true}).click();
   await page.waitForFunction(() => [...foundry.applications.instances.values()].some(app => app.sbsCastingTotal === 6));
   await page.locator('.roll-dialog button[type="submit"]').first().click();
   await page.waitForFunction(() => game.messages.contents.some(message => message.getFlag("swade-hud", "powerCast")?.itemUuid === syncQA.power.uuid));

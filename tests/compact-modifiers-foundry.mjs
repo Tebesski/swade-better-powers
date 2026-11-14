@@ -36,22 +36,25 @@ try {
   await page.locator('.sbs-modifier [data-modifier-action="toggle"]').click();
   assert.equal(await page.locator('[data-field="min"], [data-field="max"], [data-field="selected"]').count(), 0);
   assert.equal(await page.locator('.sbs-option-cost [contenteditable="true"]').count(), 2);
+  assert.deepEqual(await page.locator('.sbs-option-cost [contenteditable="true"]').allTextContents(), ["-2", "-2"]);
   await page.locator('.sbs-option-cost [contenteditable="true"]').last().fill("+4");
   await page.locator('.sbs-option-cost [contenteditable="true"]').last().press("Tab");
   await page.waitForFunction(() => compactQA.power.getFlag("swade-better-powers", "powerModifiers")[0].options[1].cost === 4);
   assert.ok(await page.locator('.sbs-modifier').evaluate(el => el.getBoundingClientRect().height < 280));
   assert.equal(await page.evaluate(() => compactQA.power.system.ppModifiers.cost), 1);
   assert.equal(await page.evaluate(() => compactQA.power.effects.size), 0);
+  assert.match(await page.evaluate(async () => (await compactQA.power.getChatData()).data.description), /Area Protection \(-2 \/ -2\)/);
   await mkdir("test-results", {recursive: true});
   await page.locator('.swade-item-sheet').screenshot({path: "test-results/compact-modifiers-editor.png"});
   console.log("PASS compact fixed options, editable costs, requested summary, and no persistent choice/effect");
   await page.evaluate(async () => {await compactQA.power.sheet.close(); compactQA.roll = compactQA.actor.rollSkill(compactQA.skill.id, {item: compactQA.power});});
   await page.locator('.roll-dialog .sbs-power-presets .toggle-list').click();
-  await page.getByRole("button", {name: "MBT (+3)", exact: true}).click();
+  await page.getByRole("button", {name: "MBT (-2)", exact: true}).click();
+  assert.match(await page.locator('.sbs-chosen-modifiers').innerText(), /MBT \(-2\)/);
   await page.waitForFunction(() => [...foundry.applications.instances.values()].some(app => app instanceof game.swade.RollDialog && app.sbsCastingTotal === 4));
   assert.match(await page.locator('.roll-dialog .formula textarea').inputValue(), /2\[No Power Points\]/);
   await page.locator('.roll-dialog .sbs-power-presets .toggle-list').click();
-  await page.getByRole("button", {name: "LBT (+4)", exact: true}).click();
+  await page.getByRole("button", {name: "LBT (-2)", exact: true}).click();
   await page.waitForFunction(() => [...foundry.applications.instances.values()].some(app => app instanceof game.swade.RollDialog && app.sbsCastingTotal === 5));
   assert.match(await page.locator('.roll-dialog .formula textarea').inputValue(), /3\[No Power Points\]/);
   await closeRoll();
@@ -62,7 +65,7 @@ try {
   console.log("PASS per-cast versions replace one another, change the casting penalty, and reset next roll");
   await page.evaluate(async () => {const {default: ItemDialog} = await import("/modules/swade-tools/scripts/class/ItemDialog.js"); new ItemDialog(compactQA.actor, compactQA.power.id).showDialog();});
   await page.locator('.swadetools-vertical .sbs-power-presets .toggle-list').click();
-  await page.getByRole("button", {name: "LBT (+4)", exact: true}).click();
+  await page.getByRole("button", {name: "LBT (-2)", exact: true}).click();
   const toolsCost = await page.evaluate(async () => {
     const {default: ItemDialog} = await import("/modules/swade-tools/scripts/class/ItemDialog.js");
     const {default: ItemRoll} = await import("/modules/swade-tools/scripts/class/ItemRoll.js");
@@ -76,19 +79,25 @@ try {
   console.log("PASS SWADE Tools receives the selected total cost without changing the power");
   const hud = await page.evaluate(async () => {
     await compactQA.power.update({"system.pp": 3});
-    await Item.create({name: "Normal PP power", type: "power", system: {pp: 2}}, {parent: compactQA.actor});
+    const normal = await Item.create({name: "Normal PP power", type: "power", system: {pp: 2}}, {parent: compactQA.actor});
+    const {savePowerModifiers} = await import("/modules/swade-better-powers/scripts/power-modifiers.mjs");
+    await savePowerModifiers(normal, [{id: "extra", name: "Extra", options: [{id: "base", cost: 1}]}]);
     const hud = game.modules.get("swade-hud").api; hud.actor = compactQA.actor;
     let list = document.createElement("div"); hud.powerSidebar(list);
     const individual = [...list.querySelectorAll(".pp-cost")].map(el => el.textContent);
     const old = game.settings.get("swade", "noPowerPoints");
     try {
+      await game.settings.set("swade", "noPowerPoints", false);
+      const normalDescription = (await normal.getChatData()).data.description;
       await game.settings.set("swade", "noPowerPoints", true); hud.actor = compactQA.actor;
+      const globalDescription = (await normal.getChatData()).data.description;
       const root = document.createElement("div"); hud.buildStatistics(root);
       list = document.createElement("div"); hud.powerSidebar(list);
-      return {individual, resources: [...root.querySelector('[data-panel="resources"]').children].map(el => el.dataset.section), pools: list.querySelectorAll(".power-pool").length};
+      return {individual, resources: [...root.querySelector('[data-panel="resources"]').children].map(el => el.dataset.section), pools: list.querySelectorAll(".power-pool").length,
+        normalLabel: normalDescription.includes("Extra (+1)"), globalLabel: globalDescription.includes("Extra (-1)")};
     } finally {await game.settings.set("swade", "noPowerPoints", old);}
   });
-  assert.deepEqual(hud, {individual: ["-2", "2 PP"], resources: ["bennies"], pools: 0});
+  assert.deepEqual(hud, {individual: ["-2", "2 PP"], resources: ["bennies"], pools: 0, normalLabel: true, globalLabel: true});
   await page.evaluate(() => game.modules.get("swade-better-powers").api.openPowers(compactQA.actor));
   await page.locator('.sbs-power-picker').waitFor();
   assert.equal(await page.evaluate(() => [...foundry.applications.instances.values()].find(app => app.constructor.name === "PowerPicker").sources.some(group => group.rows.some(row => row.uuid.startsWith("Compendium.swade.powers.")))), false);

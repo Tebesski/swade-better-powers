@@ -8,7 +8,7 @@ import {installMaintenance, isDurationTracker} from "./maintenance.mjs";
 import {installPowerTimers, openPowerTimers} from "./power-timers.mjs";
 import {registerBehaviorCode} from "./behavior-code.mjs";
 import {installPowerDamage, wirePowerDamageControls} from "./power-damage.mjs";
-import {getModifiers} from "./powers-data.mjs";
+import {getModifiers, modifierCostLabel} from "./powers-data.mjs";
 import {renderLibraryBehaviors, openModifierEditor} from "./power-modifiers.mjs";
 
 Hooks.once("init", registerBehaviorCode);
@@ -22,6 +22,7 @@ Hooks.once("setup", () => {
   installPowerDamage();
   game.modules.get(MODULE_ID).api = Object.freeze({
     openPowers, openPowerTimers, renderLibraryBehaviors, openModifierEditor, getModifiers, renderCastingBreakdown, readPowerFlag, usesNoPowerPoints: noPP, isDurationTracker, getPowerDamageChanges, wirePowerDamageControls,
+    modifierPenaltyLabel: (item, option) => noPP(item) ? modifierCostLabel(option, true) : undefined,
     getCastContext: message => {
       const cast = getCast(message);
       return cast && {...cast, raises: Math.max(0, castSuccesses(message, cast) - 1)};

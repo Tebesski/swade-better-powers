@@ -99,7 +99,7 @@ try {
   assert.equal(await prep.locator("xpath=../following-sibling::li[1]/div[1]").textContent(), "No Power Points");
   await prep.check();
   await dialog.getByRole("button", {name: "Choose a Power Modifier"}).click();
-  await dialog.getByRole("button", {name: "Far (+1)", exact: true}).click();
+  await dialog.getByRole("button", {name: "Far (-1)", exact: true}).click();
   assert.match(await formula.inputValue(), /2\[Power Preparation\]/);
   await dialog.getByRole("button", {name: "Roll", exact: true}).click();
   await page.waitForFunction(id => castQA.caster.effects.some(effect => effect.getFlag(id, "timedPower")), id);

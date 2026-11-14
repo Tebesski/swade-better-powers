@@ -69,7 +69,7 @@
       <div class="sbp-modifier-option" data-option-id="{{id}}">
         <div class="sbs-cost-option" data-id="{{id}}">
           <input type="text" data-field="label" value="{{label}}" placeholder="Option name" aria-label="Option name" {{#unless @root.editable}}disabled{{/unless}}>
-          <span class="sbs-option-cost">(<span contenteditable="{{@root.editable}}" role="textbox" inputmode="decimal" data-field="cost" data-placeholder="N" aria-label="Modifier cost">{{costText}}</span>)</span>
+          <span class="sbs-option-cost">(<span contenteditable="{{@root.editable}}" role="textbox" inputmode="decimal" data-field="cost" data-pp-cost="{{cost}}" data-placeholder="N" aria-label="Modifier cost" {{#if @root.noPowerPoints}}title="No Power Points penalty. Focus to edit the PP cost."{{/if}}>{{costText}}</span>)</span>
           {{#if @root.editable}}
             <button type="button" class="sbp-add-behavior-icon" data-modifier-action="addBehavior" title="Add behavior" aria-label="Add behavior"><i class="fa-solid fa-list-check" inert></i></button>
             {{#if removable}}

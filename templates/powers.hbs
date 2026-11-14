@@ -19,7 +19,16 @@
     <ul class="sbs-power-list unmarked-list">
       {{#each powers}}
       <li class="power item sbs-power" data-item-id="{{id}}" data-document-class="Item" draggable="true">
-        <details><summary class="power-header"><img class="sbs-power-img" src="{{img}}" alt="" data-sbs-power-action="show"><a class="name item-name">{{name}}</a>{{#if @root.editable}}<span class="item-controls"><a role="button" tabindex="0" data-sbs-power-action="favorite" title="Favorite"><i class="{{#if system.favorite}}fa-solid{{else}}fa-regular{{/if}} fa-star" inert></i></a><a role="button" tabindex="0" data-sbs-power-action="edit" title="Edit power"><i class="fa-solid fa-pen-to-square" inert></i></a></span>{{/if}}</summary>
+        <details>
+          <summary class="power-header">
+            <span class="sbs-native-chat-icon swade-official">
+              <span class="inventory">
+                <button type="button" class="item-img item-show sbs-power-icon" data-action="showItem" style="background-image: url('{{img}}');"
+                  title="{{localize 'SWADE.ShowInChat'}}" aria-label="{{localize 'SWADE.ShowInChat'}}: {{name}}"></button>
+              </span>
+            </span>
+            <a class="name item-name">{{name}}</a>{{#if @root.editable}}<span class="item-controls"><a role="button" tabindex="0" data-sbs-power-action="favorite" title="Favorite"><i class="{{#if system.favorite}}fa-solid{{else}}fa-regular{{/if}} fa-star" inert></i></a><a role="button" tabindex="0" data-sbs-power-action="edit" title="Edit power"><i class="fa-solid fa-pen-to-square" inert></i></a></span>{{/if}}
+          </summary>
         <div class="sbs-power-description">{{{description}}}</div>
         {{#if @root.editable}}<div class="sbs-power-card" data-item-id="{{id}}"><div class="sbs-casting-cost"><label>PP Cost <input class="pp-adjust" type="number" min="0" value="{{cost}}"></label>{{#unless ../noPP}}<a role="button" tabindex="0" data-sbs-power-action="pp-minus" title="Spend Power Points"><i class="fa-solid fa-minus" inert></i></a><a role="button" tabindex="0" data-sbs-power-action="pp-plus" title="Refund Power Points"><i class="fa-solid fa-plus" inert></i></a>{{/unless}}{{#if ../noPP}}<label title="Each maintained power applies −1 to further arcane rolls"><input type="checkbox" class="sbs-maintained" {{checked maintained}}> Maintain power</label>{{/if}}</div>
         <div class="sbs-power-actions">{{#if system.actions.trait}}<button type="button" data-sbs-power-action="formula"><i class="fa-solid fa-hand-sparkles" inert></i> {{system.actions.trait}}</button>{{/if}}{{#if system.damage}}<button type="button" data-sbs-power-action="damage">{{system.damage}}</button>{{/if}}{{#each extraActions}}<button type="button" data-sbs-power-action="{{id}}">{{name}}</button>{{/each}}{{#each templates}}<button type="button" data-sbs-power-action="template" data-template="{{key}}">{{localize label}}</button>{{/each}}</div></div>{{/if}}

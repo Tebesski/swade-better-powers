@@ -1,16 +1,21 @@
 import {effectsAPI, readPowerFlag, MODULE_ID} from "./constants.mjs";
-import {escapeHTML, getLocalModifiers, getPowerRaises, modifierCostLabel, modifierSummary, normalizeModifiers, normalizePowerRaises, validateModifiers} from "./powers-data.mjs";
+import {escapeHTML, getLocalModifiers, getPowerRaises, modifierCostLabel, modifierSummary, noPP, normalizeModifiers, normalizePowerRaises, validateModifiers} from "./powers-data.mjs";
 import {BEHAVIORS, behaviorFieldValue, behaviorSystem, isCodeBehavior} from "./behavior-data.mjs";
 import {trustPowerBehaviors} from "./behavior-code.mjs";
 import {effectReference, pickEffect} from "./effect-sources.mjs";
 import {POWER_MODIFIERS, POWER_RAISES, templateModifierPatch, syncTemplateModifierUpdate} from "./template-modifiers.mjs";
 
 const pending = new Map();
-export function descriptionWithModifiers(description, modifiers) {
+export function descriptionWithModifiers(description, modifiers, noPowerPoints = false) {
   const container = document.createElement("div");
   container.innerHTML = description ?? "";
   container.querySelectorAll(".sbs-power-modifier-summary").forEach(el => el.remove());
-  return container.innerHTML + modifierSummary(normalizeModifiers(modifiers));
+  return container.innerHTML + modifierSummary(normalizeModifiers(modifiers), noPowerPoints);
+}
+
+export function powerDescription(item) {
+  const modifiers = getLocalModifiers(item);
+  return noPP(item) && modifiers.length ? descriptionWithModifiers(item.system.description, modifiers, true) : item.system.description;
 }
 
 export async function separateModifierDescription(item, parts) {
@@ -21,7 +26,9 @@ export async function separateModifierDescription(item, parts) {
     const content = document.createElement("div");
     content.innerHTML = editor.querySelector(".editor-content")?.innerHTML ?? editor.innerHTML;
     const legacy = content.querySelector(".sbs-power-modifier-summary");
-    const summary = legacy?.outerHTML ?? modifierSummary(getLocalModifiers(item));
+    const noPowerPoints = noPP(item);
+    const regenerate = noPowerPoints || !legacy;
+    const summary = (regenerate && modifierSummary(getLocalModifiers(item), noPowerPoints)) || legacy?.outerHTML;
     if (!summary) continue;
     legacy?.remove();
     const replacement = customElements.get("prose-mirror").create({
@@ -29,7 +36,7 @@ export async function separateModifierDescription(item, parts) {
       value: descriptionWithModifiers(item.system.description, []), enriched: content.innerHTML
     });
     for (const {name, value} of editor.attributes) if (name !== "value") replacement.setAttribute(name, value);
-    const display = document.createRange().createContextualFragment(legacy ? summary :
+    const display = document.createRange().createContextualFragment(!regenerate ? summary :
       await foundry.applications.ux.TextEditor.implementation.enrichHTML(summary, {relativeTo: item, secrets: item.isOwner}));
     display.querySelector(".sbs-power-modifier-summary > h3")?.classList.add("additional-stats-header");
     editor.parentElement.classList.add("sbp-readonly-summary");
@@ -100,6 +107,7 @@ export async function renderPowerModifiers(app, root, library) {
   const state = modifierView(app);
   const setting = settingAPI();
   const catalog = Boolean(library);
+  const noPowerPoints = !catalog && noPP(app.document);
   const storedChanges = new Map();
   const showChanges = changes => (changes ?? []).map((change, index) => {
     storedChanges.set(change.id, change);
@@ -116,7 +124,7 @@ export async function renderPowerModifiers(app, root, library) {
     modifier.expanded = state.expanded.has(modifier.id);
     const removable = modifier.options.length > 1;
     modifier.options = modifier.options.map(option => ({...option, removable, changes: showChanges(option.changes),
-      costText: option.cost ? modifierCostLabel(option) : ""}));
+      costText: option.cost ? modifierCostLabel(option, noPowerPoints) : ""}));
   }
   const raises = (catalog ? [] : getPowerRaises(app.document)).map(raise => ({...raise, expanded: state.expandedDetails.has(raise.id), changes: showChanges(raise.changes)}));
   const section = document.createElement("section");
@@ -126,7 +134,7 @@ export async function renderPowerModifiers(app, root, library) {
   section.dataset.group = "main";
   section.dataset.tab = "modifiers";
   section.innerHTML = await foundry.applications.handlebars.renderTemplate(`modules/${MODULE_ID}/templates/power-modifiers.hbs`, {
-    modifiers, raises, libraryOption, editable: app.isEditable,
+    modifiers, raises, libraryOption, editable: app.isEditable, noPowerPoints,
     canSaveToLibrary: !catalog && game.user.isGM && Boolean(setting?.saveModifierToLibrary),
     canEditEffects: Boolean(effectsAPI()?.editEffectSource && Item.canUserCreate(game.user))
   });
@@ -181,7 +189,7 @@ export async function renderPowerModifiers(app, root, library) {
       description: row.querySelector("prose-mirror").value,
       options: [...row.querySelectorAll(".sbs-cost-option")].map(option => ({
         id: option.dataset.id, label: option.querySelector('[data-field="label"]').value,
-        cost: Number(option.querySelector('[data-field="cost"]').textContent.trim() || 0),
+        cost: Number(option.querySelector('[data-field="cost"]').dataset.ppCost),
         changes: captureChanges(option.closest(".sbp-modifier-option"))
       }))
     }));
@@ -230,8 +238,19 @@ export async function renderPowerModifiers(app, root, library) {
       if (value) { input.value = value; await save(Boolean(input.closest(".sbp-raise"))); }
     } catch (error) { ui.notifications.error(error.message); }
   });
+  const editableCost = '[contenteditable="true"][data-field="cost"]';
+  if (noPowerPoints) section.addEventListener("focusin", event => {
+    const field = event.target;
+    if (field.matches(editableCost)) field.textContent = Number(field.dataset.ppCost) ? modifierCostLabel({cost: field.dataset.ppCost}) : "";
+  });
   section.addEventListener("focusout", event => {
-    if (app.isEditable && event.target.matches('[contenteditable="true"][data-field="cost"]')) void save(false);
+    const field = event.target;
+    if (!app.isEditable || !field.matches(editableCost)) return;
+    const cost = Number(field.textContent.trim() || 0);
+    if (Number.isFinite(cost)) field.dataset.ppCost = String(cost);
+    field.textContent = Number(field.dataset.ppCost) ? modifierCostLabel({cost: field.dataset.ppCost}, noPowerPoints) : "";
+    if (Number.isFinite(cost)) void save(false);
+    else ui.notifications.error("Enter a numeric modifier cost.");
   });
   section.addEventListener("keydown", event => {
     if (event.target.matches('[contenteditable="true"][data-field="cost"]') && event.key === "Enter") {event.preventDefault(); event.stopPropagation(); event.target.blur();}

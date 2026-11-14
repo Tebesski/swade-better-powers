@@ -2,7 +2,7 @@ import {readPowerFlag, MODULE_ID, LEGACY_ID, normalizeName, report} from "./cons
 import {powerArcane, spellcastingEntries} from "./powers-data.mjs";
 import {saveEntry, removeEntry, queueActor, ensureArcaneBackground, initializeBackgrounds} from "./spellcasting.mjs";
 import {PowerPicker, applyEntry} from "./power-picker.mjs";
-import {alignModifierDescription, enableLibraryDrop, renderPowerModifiers, separateModifierDescription, installModifierDescriptionHook, syncModifierEffects} from "./power-modifiers.mjs";
+import {alignModifierDescription, enableLibraryDrop, powerDescription, renderPowerModifiers, separateModifierDescription, installModifierDescriptionHook, syncModifierEffects} from "./power-modifiers.mjs";
 import {installCastingModifiers, installToolsCastingModifiers} from "./casting-modifiers.mjs";
 import {noPP, recordPowerCost, installPowerRules, installToolsPowerRules} from "./power-rules.mjs";
 import {initializeTemplateModifiers} from "./template-modifiers.mjs";
@@ -184,7 +184,8 @@ export function installPowers(wrapMethod) {
       const context = await original(...args);
       context.sbsEntries = actorEntries(this.actor);
       await Promise.all(context.sbsEntries.flatMap(entry => entry.powers.map(async power => {
-        power.description = await foundry.applications.ux.TextEditor.implementation.enrichHTML(power.system.description, {relativeTo: this.actor.items.get(power.id), secrets: this.actor.isOwner});
+        const item = this.actor.items.get(power.id);
+        power.description = await foundry.applications.ux.TextEditor.implementation.enrichHTML(powerDescription(item), {relativeTo: item, secrets: this.actor.isOwner});
       })));
       return context;
     });
@@ -262,7 +263,6 @@ export function installPowers(wrapMethod) {
         if (action === "timers") return openPowerTimers(actor);
         if (action === "settings") return editEntry(actor, entry);
         if (action === "refresh") return actor.update({[`system.powerPoints.${entry.arcane}.value`]: actor.system.powerPoints[entry.arcane]?.max ?? 0});
-        if (action === "show") return power.show();
         if (action === "edit") return power.sheet.render({force: true});
         if (action === "favorite") return power.update({"system.favorite": !power.system.favorite});
         if (action === "template") return game.swade.util.createRegionFromPreset(button.dataset.template, power);

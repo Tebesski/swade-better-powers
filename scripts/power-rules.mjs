@@ -1,10 +1,11 @@
 import {effectsAPI, MAINTENANCE, MODULE_ID, normalizeName, PREPARATION, readPowerFlag} from "./constants.mjs";
-import {spellcastingEntries, usesNoPowerPoints, powerPointBreakdown} from "./powers-data.mjs";
+import {noPP, spellcastingEntries, powerPointBreakdown} from "./powers-data.mjs";
 import {startCast, updateCast} from "./cast-results.mjs";
 import {powerDurationEnded} from "./maintenance.mjs";
 import {importSwadeTools} from "./tools-imports.mjs";
+import {powerDescription} from "./power-modifiers.mjs";
 
-export const noPP = power => power?.type === "power" && usesNoPowerPoints(power, game.settings.get("swade", "noPowerPoints"));
+export {noPP};
 const rollCosts = new WeakMap();
 export const recordPowerCost = (power, cost) => { if (Number.isFinite(Number(cost))) rollCosts.set(power, Math.max(0, Number(cost))); };
 export const maintainedPowers = actor => actor.itemTypes.power.filter(item => noPP(item) && readPowerFlag(item, "maintained"));
@@ -54,7 +55,13 @@ export function installPowerRules(wrapMethod) {
   });
   wrapMethod(CONFIG.Item.documentClass.prototype, "getChatData", async function (original, ...args) {
     const data = await original(...args);
-    if (this.type === "power") data.settingRules.noPowerPoints = noPP(this);
+    if (this.type === "power") {
+      data.settingRules.noPowerPoints = noPP(this);
+      const description = powerDescription(this);
+      if (description !== this.system.description) {
+        data.data.description = await foundry.applications.ux.TextEditor.implementation.enrichHTML(description, args[0]);
+      }
+    }
     return data;
   });
   // Capture total cost from native character and chat-card controls, including ad-hoc PP adjustments.
