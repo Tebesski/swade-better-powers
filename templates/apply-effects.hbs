@@ -1,10 +1,10 @@
 {{#*inline "effectRow"}}
   <div class="sbp-effect-slot" data-reference="{{reference}}">
     <span class="sbp-effect-icon"><img alt="" hidden></span>
-    <input type="text" class="sbp-effect-name" aria-label="Effect" placeholder="Drop an Effect" readonly>
-    <button type="button" class="sbp-pick-effect" aria-label="Choose effect" title="Choose effect"><i class="fa-solid fa-list" inert></i></button>
+    <input type="text" class="sbp-effect-name" aria-label="{{localize "swade-better-powers.UI.Effect_2252d5cf93"}}" placeholder="{{localize "swade-better-powers.UI.DropanEffect_4a06749123"}}" readonly>
+    <button type="button" class="sbp-pick-effect" aria-label="{{localize "swade-better-powers.UI.Chooseeffect_5282ce061f"}}" title="{{localize "swade-better-powers.UI.Chooseeffect_5282ce061f"}}"><i class="fa-solid fa-list" inert></i></button>
     {{#if reference}}
-      <button type="button" class="sbp-clear-effect" aria-label="Remove effect" title="Remove effect"><i class="fa-solid fa-xmark" inert></i></button>
+      <button type="button" class="sbp-clear-effect" aria-label="{{localize "swade-better-powers.UI.Removeeffect_4e7556b8dd"}}" title="{{localize "swade-better-powers.UI.Removeeffect_4e7556b8dd"}}"><i class="fa-solid fa-xmark" inert></i></button>
     {{/if}}
   </div>
 {{/inline}}
@@ -17,14 +17,18 @@
   </div>
 {{/inline}}
 
-<legend>Apply Effect</legend>
+<legend>{{localize "swade-better-powers.UI.ApplyEffect_5b84c767f1"}}</legend>
 {{> effectRows slot="base" references=base}}
 <details data-effect-accordion="raised">
-  <summary>Raised</summary>
+  <summary>{{localize "swade-better-powers.UI.Raised_b4a8bf1f6b"}}</summary>
+  <label class="sbp-effect-mode">{{localize "swade-better-powers.UI.Baseeffects_e417526f1e"}}
+    <select data-effect-mode="raised">{{selectOptions modes selected=raisedMode}}</select>
+  </label>
   {{> effectRows slot="raised" references=raised}}
+  {{#if raises.length}}<p class="hint">{{localize "swade-better-powers.UI.AddEffectbehaviorssettouse_2afe43b7c6"}}</p>{{/if}}
 </details>
 <details data-effect-accordion="modifiers">
-  <summary>Modifier</summary>
+  <summary>{{localize "swade-better-powers.UI.Modifier_42e37604b6"}}</summary>
   <div class="sbp-effect-modifiers">
     {{#each modifiers}}
       <details data-effect-accordion="modifier-{{id}}">
@@ -32,12 +36,16 @@
         {{#each options}}
           <div class="sbp-effect-option">
             <div>{{name}}</div>
+            <label class="sbp-effect-mode">{{localize "swade-better-powers.UI.Baseeffects_e417526f1e"}}
+              <select data-effect-mode="{{slot}}" aria-label="Base effects for {{name}}">{{selectOptions modeOptions selected=modeSelection}}</select>
+            </label>
             {{> effectRows slot=slot references=references}}
+            {{#if linked.length}}<p class="hint">{{localize "swade-better-powers.UI.IncludesAddEffectbehaviorssetto_52b5c50db5"}}</p>{{/if}}
           </div>
         {{/each}}
       </details>
     {{else}}
-      <p class="hint">Add a power modifier in the Mod/Raise tab to configure its effects.</p>
+      <p class="hint">{{localize "swade-better-powers.UI.Addapowermodifierinthe_70ad404682"}}</p>
     {{/each}}
   </div>
 </details>

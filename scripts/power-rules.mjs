@@ -1,3 +1,4 @@
+import {t as sbsI18n} from "./i18n.mjs";
 import {effectsAPI, MAINTENANCE, MODULE_ID, normalizeName, PREPARATION, readPowerFlag} from "./constants.mjs";
 import {noPP, spellcastingEntries, powerPointBreakdown} from "./powers-data.mjs";
 import {startCast, updateCast} from "./cast-results.mjs";
@@ -39,11 +40,11 @@ export function powerRollModifiers(actor, skill, modifiers, options) {
   }
   if (isPower && noPP(item)) {
     const penalty = -Math.ceil(castingCost / 2);
-    modifiers.push({label: "No Power Points", value: penalty,
+    modifiers.push({label: sbsI18n("swade-better-powers.UI.NoPowerPoints_fbaa49cd57"), value: penalty,
       sbsPowerBreakdown: powerPointBreakdown(item.name, item.system.ppModifiers.cost, [], castingCost)});
   }
   const maintained = maintainedPowers(actor).length;
-  if (maintained) modifiers.push({label: "Maintained powers", value: -maintained});
+  if (maintained) modifiers.push({label: sbsI18n("swade-better-powers.UI.Maintainedpowers_c7f4f8ec59"), value: -maintained});
   return castingCost;
 }
 

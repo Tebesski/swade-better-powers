@@ -1,3 +1,4 @@
+import {t as sbsI18n} from "./i18n.mjs";
 import {readPowerFlag, MODULE_ID, normalizeName} from "./constants.mjs";
 import {entryArcane, GENERAL, parseArcaneSkill, powerArcane, spellcastingEntries} from "./powers-data.mjs";
 
@@ -7,7 +8,7 @@ export function queueActor(actor, operation) {
   queues.set(actor.uuid, next.catch(() => {}));
   return next;
 }
-export const owned = actor => { if (!actor?.isOwner) throw new Error("You do not have permission to edit this actor."); };
+export const owned = actor => { if (!actor?.isOwner) throw new Error(sbsI18n("swade-better-powers.UI.Youdonothavepermissionto_e12b555e4a")); };
 const entriesFlag = `flags.${MODULE_ID}.spellcastingEntries`;
 
 export function saveEntry(actor, entry, changes) {
@@ -15,18 +16,18 @@ export function saveEntry(actor, entry, changes) {
     owned(actor);
     const entries = structuredClone(readPowerFlag(actor, "spellcastingEntries") ?? {});
     const current = spellcastingEntries(actor).find(candidate => candidate.id === entry?.id);
-    if (!current) throw new Error("This spellcasting entry is no longer available.");
+    if (!current) throw new Error(sbsI18n("swade-better-powers.UI.Thisspellcastingentryisnolonger_e8c9589090"));
     const updated = {...current, ...changes};
     updated.name = updated.name.trim();
     updated.trait = String(updated.trait ?? "").trim();
     const attribute = Object.entries(CONFIG.SWADE.attributes).find(([key, value]) => [key, game.i18n.localize(value.long)].some(label => normalizeName(label) === normalizeName(updated.trait)));
     if (attribute) updated.trait = attribute[0];
     if (!updated.name || /[.\[\]{}]/.test(updated.name) || ["__proto__", "constructor", "prototype"].includes(updated.name)) {
-      throw new Error("Enter an entry name without periods or brackets.");
+      throw new Error(sbsI18n("swade-better-powers.UI.Enteranentrynamewithoutperiods_13a6ec00d1"));
     }
     if (current.arcane !== GENERAL) updated.arcane = updated.name;
     if (spellcastingEntries(actor).some(e => e.id !== entry.id && normalizeName(e.arcane) === normalizeName(updated.arcane))) {
-      throw new Error("A spellcasting entry with that name already exists.");
+      throw new Error(sbsI18n("swade-better-powers.UI.Aspellcastingentrywiththatname_062cd86a52"));
     }
     entries[entry.id] = updated;
     const updates = {[entriesFlag]: entries};
@@ -49,7 +50,7 @@ export function removeEntry(actor, entryId) {
     const entries = spellcastingEntries(actor);
     const current = entries.find(entry => entry.id === entryId);
     if (!current) return;
-    if (entries.length <= 1) throw new Error("Keep at least one spellcasting entry.");
+    if (entries.length <= 1) throw new Error(sbsI18n("swade-better-powers.UI.Keepatleastonespellcastingentry_a0f9be621f"));
     const destination = entries.find(entry => entry !== current);
     const stored = structuredClone(readPowerFlag(actor, "spellcastingEntries") ?? {});
     delete stored[entryId];

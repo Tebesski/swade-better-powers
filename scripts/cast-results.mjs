@@ -76,10 +76,20 @@ export function castSuccesses(message, cast) {
 }
 
 const pending = new Map();
-export function getPowerDamageChanges(message) {
+export function getPowerDamageChanges(message, raise) {
   const cast = getCast(message);
   const successes = cast?.damageChanges && castSuccesses(message, cast);
-  return successes ? selectedBehaviors(cast.damageChanges, successes - 1, isDamageBehavior) : [];
+  if (!successes) return [];
+  const {damageChanges} = cast;
+  if (raise == null) return selectedBehaviors(damageChanges, successes - 1, isDamageBehavior);
+  const raises = damageChanges.raises.filter(entry => entry.level === raise);
+  return selectedBehaviors({...damageChanges, raises}, raise, isDamageBehavior);
+}
+
+export function getPowerDamageRaiseLevels(message) {
+  return (getCast(message)?.damageChanges?.raises ?? [])
+    .filter(raise => raise.changes.some(({change}) => change.enabled && isDamageBehavior(change)))
+    .map(raise => raise.level);
 }
 
 function resolveCast(message, userId) {

@@ -1,6 +1,6 @@
 <section class="sbs-picker-body">
-  <button type="button" class="sbs-create" data-action="createPower"><i class="fa-solid fa-plus" inert></i> Create new power</button>
-  <p class="sbs-entry-hint">Add to {{entry.name}}{{#if entry.trait}} · {{entry.trait}}{{/if}}</p>
-  <input type="search" placeholder="Search powers…" aria-label="Search powers" autocomplete="off">
-  <div class="sbs-results">{{#each sources}}<section class="sbs-group"><h3>{{label}}</h3><ol class="unmarked-list">{{#each rows}}<li class="sbs-row" data-name="{{name}}"><button type="button" class="sbs-choice" data-action="choose" data-uuid="{{uuid}}"><img src="{{img}}" alt=""><span>{{name}}</span></button></li>{{/each}}</ol></section>{{/each}}<p class="sbs-empty" hidden>No matching powers.</p></div>
+  <button type="button" class="sbs-create" data-action="createPower"><i class="fa-solid fa-plus" inert></i> {{localize "swade-better-powers.UI.Createnewpower_ac16d3607e"}}</button>
+  <p class="sbs-entry-hint">{{localize "swade-better-powers.UI.Addto_82b9ffd3ce"}} {{entry.name}}{{#if entry.trait}} · {{entry.trait}}{{/if}}</p>
+  <input type="search" placeholder="{{localize "swade-better-powers.UI.Searchpowers_1c1fc4e731"}}" aria-label="{{localize "swade-better-powers.UI.Searchpowers_f138570b3d"}}" autocomplete="off">
+  <div class="sbs-results">{{#each sources}}<section class="sbs-group"><h3>{{label}}</h3><ol class="unmarked-list">{{#each rows}}<li class="sbs-row" data-name="{{name}}"><button type="button" class="sbs-choice" data-action="choose" data-uuid="{{uuid}}"><img src="{{img}}" alt=""><span>{{name}}</span></button></li>{{/each}}</ol></section>{{/each}}<p class="sbs-empty" hidden>{{localize "swade-better-powers.UI.Nomatchingpowers_3ffedc720a"}}</p></div>
 </section>

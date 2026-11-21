@@ -1,5 +1,6 @@
+import {t as sbsI18n} from "./i18n.mjs";
 import {effectsAPI, readPowerFlag, MODULE_ID} from "./constants.mjs";
-import {escapeHTML, getLocalModifiers, getPowerRaises, modifierCostLabel, modifierSummary, noPP, normalizeModifiers, normalizePowerRaises, validateModifiers} from "./powers-data.mjs";
+import {escapeHTML, getLocalModifiers, getModifiers, getPowerRaises, modifierCostLabel, modifierSummary, noPP, normalizeModifiers, normalizePowerRaises, validateModifiers} from "./powers-data.mjs";
 import {BEHAVIORS, behaviorFieldValue, behaviorSystem, isCodeBehavior} from "./behavior-data.mjs";
 import {trustPowerBehaviors} from "./behavior-code.mjs";
 import {effectReference, pickEffect} from "./effect-sources.mjs";
@@ -15,10 +16,24 @@ export function descriptionWithModifiers(description, modifiers, noPowerPoints =
 
 export function powerDescription(item) {
   const modifiers = getLocalModifiers(item);
-  return noPP(item) && modifiers.length ? descriptionWithModifiers(item.system.description, modifiers, true) : item.system.description;
+  return modifiers.length ? descriptionWithModifiers(item.system.description, modifiers, noPP(item)) : item.system.description;
 }
 
-export async function separateModifierDescription(item, parts) {
+export async function powerChatDescription(item) {
+  const enrich = text => foundry.applications.ux.TextEditor.implementation.enrichHTML(text, {relativeTo: item, secrets: false});
+  const [description, modifiers] = await Promise.all([
+    enrich(descriptionWithModifiers(item.system.description, [])),
+    enrich(modifierSummary(getLocalModifiers(item), noPP(item)))
+  ]);
+  return {description, modifiers};
+}
+
+export async function powerModifierSummary(item, accordion = false) {
+  const summary = modifierSummary(getModifiers(item), noPP(item), accordion);
+  return summary ? foundry.applications.ux.TextEditor.implementation.enrichHTML(summary, {relativeTo: item, secrets: item.isOwner}) : "";
+}
+
+export async function renderModifierDescription(item, parts) {
   if (item.type !== "power") return;
   for (const part of Object.values(parts)) {
     const editor = part?.querySelector?.('prose-mirror[name="system.description"]');
@@ -26,28 +41,25 @@ export async function separateModifierDescription(item, parts) {
     const content = document.createElement("div");
     content.innerHTML = editor.querySelector(".editor-content")?.innerHTML ?? editor.innerHTML;
     const legacy = content.querySelector(".sbs-power-modifier-summary");
-    const noPowerPoints = noPP(item);
-    const regenerate = noPowerPoints || !legacy;
-    const summary = (regenerate && modifierSummary(getLocalModifiers(item), noPowerPoints)) || legacy?.outerHTML;
+    const summary = await powerModifierSummary(item) || legacy?.outerHTML;
     if (!summary) continue;
     legacy?.remove();
+    content.insertAdjacentHTML("beforeend", summary);
+    content.querySelector(".sbs-power-modifier-summary > h3")?.classList.add("additional-stats-header");
+    // Foundry renders enriched HTML for reading and loads only the raw value when editing starts.
     const replacement = customElements.get("prose-mirror").create({
       name: editor.getAttribute("name"), toggled: true,
       value: descriptionWithModifiers(item.system.description, []), enriched: content.innerHTML
     });
     for (const {name, value} of editor.attributes) if (name !== "value") replacement.setAttribute(name, value);
-    const display = document.createRange().createContextualFragment(!regenerate ? summary :
-      await foundry.applications.ux.TextEditor.implementation.enrichHTML(summary, {relativeTo: item, secrets: item.isOwner}));
-    display.querySelector(".sbs-power-modifier-summary > h3")?.classList.add("additional-stats-header");
-    editor.parentElement.classList.add("sbp-readonly-summary");
-    editor.replaceWith(replacement, display);
+    editor.replaceWith(replacement);
   }
 }
 
 function queuePowerUpdate(item, update) {
   const previous = pending.get(item.uuid) ?? Promise.resolve();
   const next = previous.catch(() => {}).then(() => {
-    if (!item.isOwner) throw new Error("You do not have permission to edit this power.");
+    if (!item.isOwner) throw new Error(sbsI18n("swade-better-powers.UI.Youdonothavepermissionto_314d6ef3e3"));
     return update();
   });
   pending.set(item.uuid, next);
@@ -67,7 +79,7 @@ export function savePowerModifiers(item, modifiers) {
 
 export function savePowerRaises(item, raises) {
   const normalized = normalizePowerRaises(raises);
-  if (normalized.length !== raises.length) throw new Error("Each raise needs a different positive whole number.");
+  if (normalized.length !== raises.length) throw new Error(sbsI18n("swade-better-powers.UI.Eachraiseneedsadifferentpositive_cfa342ad44"));
   return queuePowerUpdate(item, async () => {
     await trustPowerBehaviors(normalized.flatMap(raise => raise.changes));
     return item.update({[POWER_RAISES]: normalized});
@@ -151,7 +163,7 @@ export async function renderPowerModifiers(app, root, library) {
     const updateToggle = () => {
       const toggle = row.querySelector('[data-modifier-action="toggle"]');
       toggle.setAttribute("aria-expanded", String(row.open));
-      toggle.setAttribute("aria-label", row.open ? "Collapse modifier" : "Expand modifier");
+      toggle.setAttribute("aria-label", row.open ? sbsI18n("swade-better-powers.UI.Collapsemodifier_86fa6e6682") : sbsI18n("swade-better-powers.UI.Expandmodifier_c5b8411d0f"));
       if (row.open) state.expanded.add(row.dataset.id); else state.expanded.delete(row.dataset.id);
     };
     updateToggle();
@@ -176,7 +188,7 @@ export async function renderPowerModifiers(app, root, library) {
       if (field.type === "checkbox") return element.checked;
       if (field.type !== "number") return element.value;
       const value = element.valueAsNumber;
-      if (!Number.isSafeInteger(value) || value < 0) throw new Error(`${field.label} requires a nonnegative whole number.`);
+      if (!Number.isSafeInteger(value) || value < 0) throw new Error(sbsI18n("swade-better-powers.UI.requiresanonnegativewholenumber_4f49288a04", {p0: (field.label)}));
       return value;
     });
     return {id, type, enabled: input("enabled").checked, label: input("behaviorLabel").value.trim(), system: {...previous?.system, ...system}};
@@ -250,7 +262,7 @@ export async function renderPowerModifiers(app, root, library) {
     if (Number.isFinite(cost)) field.dataset.ppCost = String(cost);
     field.textContent = Number(field.dataset.ppCost) ? modifierCostLabel({cost: field.dataset.ppCost}, noPowerPoints) : "";
     if (Number.isFinite(cost)) void save(false);
-    else ui.notifications.error("Enter a numeric modifier cost.");
+    else ui.notifications.error(sbsI18n("swade-better-powers.UI.Enteranumericmodifiercost_9e0f8821ac"));
   });
   section.addEventListener("keydown", event => {
     if (event.target.matches('[contenteditable="true"][data-field="cost"]') && event.key === "Enter") {event.preventDefault(); event.stopPropagation(); event.target.blur();}
@@ -288,8 +300,8 @@ export async function renderPowerModifiers(app, root, library) {
       try {
         const modifier = getLocalModifiers(app.document).find(row => row.id === id);
         if (!modifier || !await foundry.applications.api.DialogV2.confirm({
-          classes: ["sbp-dialog"], window: {title: "Remove modifier"}, rejectClose: false,
-          content: `<p>Remove “${escapeHTML(modifier.name)}” from this power?</p>`
+          classes: ["sbp-dialog"], window: {title: sbsI18n("swade-better-powers.UI.Removemodifier_f66e522d96")}, rejectClose: false,
+          content: `<p>${sbsI18n("swade-better-powers.UI.Removefromthispower_cd789efe4a", {p0: (escapeHTML(modifier.name))})}</p>`
         })) return;
         await pending.get(app.document.uuid)?.catch(() => {});
         await savePowerModifiers(app.document, getLocalModifiers(app.document).filter(row => row.id !== id));
@@ -307,9 +319,9 @@ export async function renderPowerModifiers(app, root, library) {
     let added;
     if (action === "addBehavior") {
       const types = Object.entries(BEHAVIORS).filter(([, def]) => !def.code || game.user.isGM);
-      added = await foundry.applications.api.DialogV2.prompt({classes: ["sbp-dialog"], window: {title: "Add power behavior"}, rejectClose: false,
-        content: `<label>Behavior <select name="behavior">${types.map(([key, def]) => `<option value="${key}">${escapeHTML(def.label)}</option>`).join("")}</select></label>`,
-        ok: {label: "Add", callback: (_event, target) => target.form.elements.behavior.value}});
+      added = await foundry.applications.api.DialogV2.prompt({classes: ["sbp-dialog"], window: {title: sbsI18n("swade-better-powers.UI.Addpowerbehavior_081decd726")}, rejectClose: false,
+        content: `<label>${sbsI18n("swade-better-powers.UI.Behavior_edf8d3f178")} <select name="behavior">${types.map(([key, def]) => `<option value="${key}">${escapeHTML(def.label)}</option>`).join("")}</select></label>`,
+        ok: {label: sbsI18n("swade-better-powers.UI.Add_9fd728c66c"), callback: (_event, target) => target.form.elements.behavior.value}});
       if (!added || !section.isConnected) return;
     }
     if (action === "pickBehaviorEffect") {
@@ -333,7 +345,7 @@ export async function renderPowerModifiers(app, root, library) {
     void save(isRaise, definitions => {
       const variant = definitions.find(entry => entry.id === id);
       switch (action) {
-        case "add": definitions.push({id: foundry.utils.randomID(), name: "New modifier", description: "", options: [option()]}); break;
+        case "add": definitions.push({id: foundry.utils.randomID(), name: sbsI18n("swade-better-powers.UI.Newmodifier_d00357d3e6"), description: "", options: [option()]}); break;
         case "addRaise": definitions.push({id: foundry.utils.randomID(), level: Math.max(0, ...definitions.map(row => row.level)) + 1, changes: []}); break;
         case "removeRaise": definitions.splice(definitions.indexOf(variant), 1); break;
         case "addOption": variant.options.push(option()); break;
@@ -373,33 +385,7 @@ export async function renderPowerModifiers(app, root, library) {
   });
 }
 
-const descriptionLayouts = new WeakMap();
-
-export function alignModifierDescription(app, root) {
-  descriptionLayouts.get(app)?.disconnect();
-  descriptionLayouts.delete(app);
-  const container = root.querySelector(".sbp-readonly-summary");
-  const heading = root.querySelector(".sheet-sidebar .additional-stats-header");
-  const divider = heading?.previousElementSibling;
-  if (!container || !divider?.matches("hr")) return;
-
-  const align = () => {
-    if (!container.getClientRects().length) return;
-    const offset = divider.getBoundingClientRect().top - container.getBoundingClientRect().top;
-    container.style.setProperty("--sbp-description-split", `${offset}px`);
-  };
-  const observer = new ResizeObserver(align);
-  observer.observe(container);
-  for (const child of heading.parentElement.children) observer.observe(child);
-  descriptionLayouts.set(app, observer);
-  align();
-}
-
 export function installModifierDescriptionHook() {
-  Hooks.on("closeApplicationV2", app => {
-    descriptionLayouts.get(app)?.disconnect();
-    descriptionLayouts.delete(app);
-  });
   Hooks.on("preCreateItem", item => {
     const patch = templateModifierPatch(item);
     if (!patch) return;

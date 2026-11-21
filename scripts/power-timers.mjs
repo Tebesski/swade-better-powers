@@ -1,3 +1,4 @@
+import {t as sbsI18n} from "./i18n.mjs";
 import {MODULE_ID, report} from "./constants.mjs";
 import {powerDuration} from "./cast-results.mjs";
 import {createPowerTimer, editPowerTimer, isDurationTracker, isPowerTimer, powerDurationEnded, timerName, timerProgress} from "./maintenance.mjs";
@@ -9,7 +10,7 @@ const managers = new Map();
 
 class PowerTimers extends HandlebarsApplicationMixin(ApplicationV2) {
   constructor(actor) {
-    super({window: {title: `Power Timers · ${actor.name}`}});
+    super({window: {title: sbsI18n("swade-better-powers.UI.PowerTimers_1bea10c42c", {p0: (actor.name)})}});
     this.actor = actor;
   }
 
@@ -23,14 +24,14 @@ class PowerTimers extends HandlebarsApplicationMixin(ApplicationV2) {
         const current = timerProgress(effect);
         const units = Object.keys(DURATION_UNITS).map(unit => `<option value="${unit}" ${unit === current.units ? "selected" : ""}>${unit}</option>`).join("");
         const content = `<div class="standard-form">
-          <label>Total Duration <input type="number" name="value" min="1" step="1" required value="${current.value}"></label>
-          <label>Unit <select name="units">${units}</select></label>
-          <label>Elapsed <input type="number" name="elapsed" min="0" step="any" required value="${Number(current.elapsed.toFixed(4))}"></label>
-          <p class="hint">Elapsed is the current tick in the selected unit. Reaching the total duration triggers expiration.</p>
+          <label>${sbsI18n("swade-better-powers.UI.TotalDuration_a1a08a77ed")} <input type="number" name="value" min="1" step="1" required value="${current.value}"></label>
+          <label>${sbsI18n("swade-better-powers.UI.Unit_4e545960f1")} <select name="units">${units}</select></label>
+          <label>${sbsI18n("swade-better-powers.UI.Elapsed_a194a68a45")} <input type="number" name="elapsed" min="0" step="any" required value="${Number(current.elapsed.toFixed(4))}"></label>
+          <p class="hint">${sbsI18n("swade-better-powers.UI.Elapsedisthecurrenttickin_a614bd43e8")}</p>
         </div>`;
         try {
-          await foundry.applications.api.DialogV2.prompt({classes: ["sbp-dialog"], window: {title: `Edit Timer · ${timerName(effect)}`}, content, rejectClose: false,
-            ok: {label: "Save", callback: (_event, submit) => {
+          await foundry.applications.api.DialogV2.prompt({classes: ["sbp-dialog"], window: {title: sbsI18n("swade-better-powers.UI.EditTimer_38c861ce0d", {p0: (timerName(effect))})}, content, rejectClose: false,
+            ok: {label: sbsI18n("swade-better-powers.UI.Save_1509f561f2"), callback: (_event, submit) => {
               const fields = submit.form.elements;
               return editPowerTimer(effect, {value: fields.value.valueAsNumber, units: fields.units.value, elapsed: fields.elapsed.valueAsNumber});
             }}
@@ -43,7 +44,7 @@ class PowerTimers extends HandlebarsApplicationMixin(ApplicationV2) {
         try {
           const power = this.actor.items.get(this.element.querySelector("select")?.value);
           const duration = noPP(power) && powerDuration(power);
-          if (!duration) throw new Error("Choose a No Power Points power with a timed duration.");
+          if (!duration) throw new Error(sbsI18n("swade-better-powers.UI.ChooseaNoPowerPointspower_0b0613caa2"));
           await createPowerTimer(power, duration);
         } catch (error) { report(error); }
         finally { this.starting = false; }
@@ -54,12 +55,12 @@ class PowerTimers extends HandlebarsApplicationMixin(ApplicationV2) {
         this.stopping.add(effect.id);
         try {
           await effect.deleteDialog({
-            window: {title: `Stop Timer · ${timerName(effect)}`},
-            content: "<p>Stop this cast’s timer and end any maintenance penalty from it?</p>",
-            yes: {label: "Stop Timer", default: false, callback: () => {
+            window: {title: sbsI18n("swade-better-powers.UI.StopTimer_2c3d2b940e", {p0: (timerName(effect))})},
+            content: `<p>${sbsI18n("swade-better-powers.UI.Stopthiscaststimerand_5fbd1c33e8")}</p>`,
+            yes: {label: sbsI18n("swade-better-powers.UI.StopTimer_a4ea8be836"), default: false, callback: () => {
               if (this.actor.isOwner && this.actor.effects.get(effect.id) === effect) return effect.delete({animate: false});
             }},
-            no: {label: "Cancel", default: true}, rejectClose: false
+            no: {label: sbsI18n("swade-better-powers.UI.Cancel_19766ed6cc"), default: true}, rejectClose: false
           });
         } catch (error) { report(error); }
         finally { this.stopping.delete(effect.id); }
@@ -78,8 +79,8 @@ class PowerTimers extends HandlebarsApplicationMixin(ApplicationV2) {
       .map(power => ({id: power.id, label: `${power.name} (${power.system.duration})`}));
     const timers = this.actor.effects.filter(isPowerTimer).map(effect => {
       const renewals = effect.flags[MODULE_ID]?.maintenance;
-      const phase = isDurationTracker(effect) ? "Initial duration" : `Maintaining · ${renewals} ${renewals === 1 ? "renewal" : "renewals"}`;
-      const state = effect.disabled ? "Disabled" : powerDurationEnded(effect) ? "Expired · awaiting decision" : effect.duration.label;
+      const phase = isDurationTracker(effect) ? sbsI18n("swade-better-powers.UI.Initialduration_642d716a12") : `Maintaining · ${renewals} ${renewals === 1 ? "renewal" : "renewals"}`;
+      const state = effect.disabled ? sbsI18n("swade-better-powers.UI.Disabled_75081b593d") : powerDurationEnded(effect) ? sbsI18n("swade-better-powers.UI.Expiredawaitingdecision_03e26fe013") : effect.duration.label;
       return {id: effect.id, img: effect.img, name: timerName(effect), detail: `${phase} · ${state}`};
     });
     return {...context, powers, timers, selectedPower: this.selectedPower, powerSelectId: `${this.id}-power`};
@@ -98,7 +99,7 @@ class PowerTimers extends HandlebarsApplicationMixin(ApplicationV2) {
 }
 
 export function openPowerTimers(actor) {
-  if (!actor?.isOwner) throw new Error("You must own the caster to manage power timers.");
+  if (!actor?.isOwner) throw new Error(sbsI18n("swade-better-powers.UI.Youmustownthecasterto_8445bcd4eb"));
   let manager = managers.get(actor.uuid);
   if (!manager) {
     manager = new PowerTimers(actor);
@@ -109,13 +110,13 @@ export function openPowerTimers(actor) {
 
 export function installPowerTimers() {
   const refresh = manager => { if (manager?.rendered) void manager.render().catch(report); };
-  for (const event of ["createActiveEffect", "updateActiveEffect", "deleteActiveEffect"]) {
+  for (const event of [sbsI18n("swade-better-powers.UI.createActiveEffect_4607bdbb60"), sbsI18n("swade-better-powers.UI.updateActiveEffect_5ddfac034c"), sbsI18n("swade-better-powers.UI.deleteActiveEffect_1194b28b56")]) {
     Hooks.on(event, effect => { if (isPowerTimer(effect)) refresh(managers.get(effect.actor?.uuid)); });
   }
-  for (const event of ["createItem", "updateItem", "deleteItem"]) {
+  for (const event of [sbsI18n("swade-better-powers.UI.createItem_2be87307d5"), sbsI18n("swade-better-powers.UI.updateItem_fc765ef48a"), sbsI18n("swade-better-powers.UI.deleteItem_0259ed622a")]) {
     Hooks.on(event, item => { if (item.type === "power") refresh(managers.get(item.actor?.uuid)); });
   }
-  for (const event of ["updateWorldTime", "updateCombat", "deleteCombat"]) {
+  for (const event of [sbsI18n("swade-better-powers.UI.updateWorldTime_35272cec51"), sbsI18n("swade-better-powers.UI.updateCombat_b113e210aa"), sbsI18n("swade-better-powers.UI.deleteCombat_d0b7e5bed9")]) {
     Hooks.on(event, () => { for (const manager of managers.values()) refresh(manager); });
   }
 }

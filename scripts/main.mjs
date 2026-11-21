@@ -2,14 +2,14 @@ import {MODULE_ID, readPowerFlag, report, wrapMethod} from "./constants.mjs";
 import {installPowers, readyPowers, openPowers} from "./powers.mjs";
 import {renderCastingBreakdown} from "./casting-chat.mjs";
 import {noPP} from "./power-rules.mjs";
-import {castSuccesses, getCast, getPowerDamageChanges, installCastResults} from "./cast-results.mjs";
+import {castSuccesses, getCast, getPowerDamageChanges, getPowerDamageRaiseLevels, installCastResults} from "./cast-results.mjs";
 import {installApplyEffects} from "./apply-effects.mjs";
 import {installMaintenance, isDurationTracker} from "./maintenance.mjs";
 import {installPowerTimers, openPowerTimers} from "./power-timers.mjs";
 import {registerBehaviorCode} from "./behavior-code.mjs";
 import {installPowerDamage, wirePowerDamageControls} from "./power-damage.mjs";
 import {getModifiers, modifierCostLabel} from "./powers-data.mjs";
-import {renderLibraryBehaviors, openModifierEditor} from "./power-modifiers.mjs";
+import {renderLibraryBehaviors, openModifierEditor, powerChatDescription} from "./power-modifiers.mjs";
 
 Hooks.once("init", registerBehaviorCode);
 
@@ -21,8 +21,9 @@ Hooks.once("setup", () => {
   installPowerTimers();
   installPowerDamage();
   game.modules.get(MODULE_ID).api = Object.freeze({
-    openPowers, openPowerTimers, renderLibraryBehaviors, openModifierEditor, getModifiers, renderCastingBreakdown, readPowerFlag, usesNoPowerPoints: noPP, isDurationTracker, getPowerDamageChanges, wirePowerDamageControls,
+    openPowers, openPowerTimers, renderLibraryBehaviors, openModifierEditor, getModifiers, powerChatDescription, renderCastingBreakdown, readPowerFlag, usesNoPowerPoints: noPP, isDurationTracker, getPowerDamageChanges, wirePowerDamageControls,
     modifierPenaltyLabel: (item, option) => noPP(item) ? modifierCostLabel(option, true) : undefined,
+    getPowerDamageRaiseLevels,
     getCastContext: message => {
       const cast = getCast(message);
       return cast && {...cast, raises: Math.max(0, castSuccesses(message, cast) - 1)};

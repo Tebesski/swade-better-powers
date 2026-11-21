@@ -1,3 +1,4 @@
+import {t as sbsI18n} from "./i18n.mjs";
 import {modifierCostLabel} from "./powers-data.mjs";
 import {readPowerFlag, MODULE_ID} from "./constants.mjs";
 
@@ -26,18 +27,18 @@ export function renderCastingBreakdown(message, html) {
   }
   let line = [...list.children].find(li => /^No Power Points\s*:/.test(li.textContent.trim()));
   if (!line) {
-    line = document.createElement("li"); line.textContent = `No Power Points: ${breakdown.penalty || 0}`;
+    line = document.createElement("li"); line.textContent = sbsI18n("swade-better-powers.UI.NoPowerPoints_3b6a94929b", {p0: (breakdown.penalty || 0)});
     list.append(line);
   }
   const costs = document.createElement("ul"); costs.className = "sbs-npp-breakdown";
   breakdown.costs.forEach((cost, index) => {
     const row = document.createElement("li");
-    row.textContent = `${cost.name}: ${index ? modifierCostLabel(cost) : cost.cost} PP`;
+    row.textContent = sbsI18n("swade-better-powers.UI.PP_8f87a084f9", {p0: (cost.name), p1: (index ? modifierCostLabel(cost) : cost.cost)});
     costs.append(row);
   });
   const formula = document.createElement("li"); formula.className = "sbs-npp-formula";
   formula.textContent = breakdown.formula;
-  formula.title = "Casting penalty: negative half of the total cost, rounded up. Total cost cannot be below zero.";
+  formula.title = sbsI18n("swade-better-powers.UI.Castingpenaltynegativehalfofthe_ee26994668");
   costs.append(formula); line.append(costs);
 }
 

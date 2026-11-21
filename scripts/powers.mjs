@@ -1,8 +1,9 @@
+import {t as sbsI18n} from "./i18n.mjs";
 import {readPowerFlag, MODULE_ID, LEGACY_ID, normalizeName, report} from "./constants.mjs";
 import {powerArcane, spellcastingEntries} from "./powers-data.mjs";
 import {saveEntry, removeEntry, queueActor, ensureArcaneBackground, initializeBackgrounds} from "./spellcasting.mjs";
 import {PowerPicker, applyEntry} from "./power-picker.mjs";
-import {alignModifierDescription, enableLibraryDrop, powerDescription, renderPowerModifiers, separateModifierDescription, installModifierDescriptionHook, syncModifierEffects} from "./power-modifiers.mjs";
+import {descriptionWithModifiers, enableLibraryDrop, powerModifierSummary, renderPowerModifiers, renderModifierDescription, installModifierDescriptionHook, syncModifierEffects} from "./power-modifiers.mjs";
 import {installCastingModifiers, installToolsCastingModifiers} from "./casting-modifiers.mjs";
 import {noPP, recordPowerCost, installPowerRules, installToolsPowerRules} from "./power-rules.mjs";
 import {initializeTemplateModifiers} from "./template-modifiers.mjs";
@@ -29,33 +30,33 @@ async function editEntry(actor, entry) {
   const {DialogV2} = foundry.applications.api;
   const content = document.createElement("div");
   content.className = "standard-form sbs-entry-settings";
-  const name = document.createElement("input"); name.type = "text"; name.name = "entryName"; name.value = entry.name;
+  const name = document.createElement("input"); name.type = "text"; name.name = sbsI18n("swade-better-powers.UI.entryName_c3fdee7af7"); name.value = entry.name;
   name.setAttribute("value", entry.name);
   name.id = `sbs-entry-name-${foundry.utils.randomID()}`;
-  const nameLabel = document.createElement("label"); nameLabel.textContent = "Name"; nameLabel.htmlFor = name.id;
+  const nameLabel = document.createElement("label"); nameLabel.textContent = sbsI18n("swade-better-powers.UI.Name_dcd1d5223f"); nameLabel.htmlFor = name.id;
   const nameRow = document.createElement("div"); nameRow.className = "sbs-entry-field form-fields";
   nameRow.append(name);
   if (spellcastingEntries(actor).length > 1) {
     const remove = document.createElement("button"); remove.type = "button"; remove.className = "sbs-entry-remove";
-    remove.innerHTML = '<i class="fa-solid fa-trash" inert></i>';
-    remove.title = "Remove spellcasting entry"; remove.setAttribute("aria-label", remove.title);
+    remove.innerHTML = `<i class="fa-solid fa-trash" inert></i>`;
+    remove.title = sbsI18n("swade-better-powers.UI.Removespellcastingentry_dae23f6499"); remove.setAttribute("aria-label", remove.title);
     nameRow.append(remove);
   }
   const nameField = document.createElement("div"); nameField.className = "sbs-entry-name";
   nameField.append(nameLabel, nameRow);
-  const traitInput = document.createElement("input"); traitInput.type = "text"; traitInput.name = "entryTrait"; traitInput.value = entry.trait ?? "";
+  const traitInput = document.createElement("input"); traitInput.type = "text"; traitInput.name = sbsI18n("swade-better-powers.UI.entryTrait_6adcd07cac"); traitInput.value = entry.trait ?? "";
   traitInput.setAttribute("value", entry.trait ?? "");
-  const traitLabel = document.createElement("label"); traitLabel.textContent = "Casting trait";
+  const traitLabel = document.createElement("label"); traitLabel.textContent = sbsI18n("swade-better-powers.UI.Castingtrait_452e2719b0");
   const row = document.createElement("div"); row.className = "sbs-entry-field form-fields";
-  const choose = document.createElement("button"); choose.type = "button"; choose.innerHTML = '<i class="fa-solid fa-list" inert></i>'; choose.title = "Choose a trait";
+  const choose = document.createElement("button"); choose.type = "button"; choose.innerHTML = `<i class="fa-solid fa-list" inert></i>`; choose.title = sbsI18n("swade-better-powers.UI.Chooseatrait_0650f3338f");
   choose.className = "sbs-entry-trait-picker";
-  choose.setAttribute("aria-label", "Choose a trait");
+  choose.setAttribute("aria-label", sbsI18n("swade-better-powers.UI.Chooseatrait_0650f3338f"));
   row.append(traitInput, choose); traitLabel.append(row);
   content.append(nameField, traitLabel);
   const shell = document.createElement("div");
   shell.append(content);
-  const dialog = new DialogV2({classes: ["sbp-dialog"], window: {title: "Spellcasting entry"}, position: {width: 440}, content: shell,
-    buttons: [{action: "save", label: "Save", default: true, callback: async (_event, button) => {
+  const dialog = new DialogV2({classes: ["sbp-dialog"], window: {title: sbsI18n("swade-better-powers.UI.Spellcastingentry_6b0027c406")}, position: {width: 440}, content: shell,
+    buttons: [{action: "save", label: sbsI18n("swade-better-powers.UI.Save_1509f561f2"), default: true, callback: async (_event, button) => {
       const form = button.form;
       await saveEntry(actor, entry, {name: form.querySelector('[name="entryName"]').value, trait: form.querySelector('[name="entryTrait"]').value.trim()});
     }}]});
@@ -65,10 +66,10 @@ async function editEntry(actor, entry) {
     const button = event.currentTarget;
     button.disabled = true;
     const prompt = document.createElement("p");
-    prompt.textContent = `Remove ${entry.name}? Any powers assigned to this entry will move to another spellcasting entry.`;
+    prompt.textContent = sbsI18n("swade-better-powers.UI.RemoveAnypowersassignedtothis_6beab3146d", {p0: (entry.name)});
     try {
-      const confirmed = await DialogV2.confirm({classes: ["sbp-dialog"], window: {title: "Remove spellcasting entry"}, content: prompt.outerHTML,
-        yes: {label: "Remove", default: false}, no: {label: "Cancel", default: true}, rejectClose: false});
+      const confirmed = await DialogV2.confirm({classes: ["sbp-dialog"], window: {title: sbsI18n("swade-better-powers.UI.Removespellcastingentry_dae23f6499")}, content: prompt.outerHTML,
+        yes: {label: sbsI18n("swade-better-powers.UI.Remove_c3812fc4ac"), default: false}, no: {label: sbsI18n("swade-better-powers.UI.Cancel_19766ed6cc"), default: true}, rejectClose: false});
       if (confirmed) {
         await removeEntry(actor, entry.id);
         await dialog.close();
@@ -80,12 +81,12 @@ async function editEntry(actor, entry) {
     event.preventDefault();
     const input = dialog.element.querySelector('[name="entryTrait"]');
     const onSelect = value => {
-      if (!input.isConnected) throw new Error("The spellcasting settings window was closed.");
+      if (!input.isConnected) throw new Error(sbsI18n("swade-better-powers.UI.Thespellcastingsettingswindowwasclosed_7baad5b2fb"));
       input.value = value;
       input.dispatchEvent(new Event("change", {bubbles: true}));
     };
     const picker = game.modules.get(LEGACY_ID)?.api?.openTraitPicker;
-    if (picker) void picker(onSelect, {title: "Choose a casting trait", classes: ["sbp-dialog"]}).catch(report);
+    if (picker) void picker(onSelect, {title: sbsI18n("swade-better-powers.UI.Chooseacastingtrait_10237137f8"), classes: ["sbp-dialog"]}).catch(report);
     else void pickCastingTrait(actor).then(value => { if (value) onSelect(value); }).catch(report);
   });
 }
@@ -93,15 +94,15 @@ async function editEntry(actor, entry) {
 function pickCastingTrait(actor) {
   const select = document.createElement("select");
   const attributes = document.createElement("optgroup");
-  attributes.label = "Attributes";
+  attributes.label = sbsI18n("swade-better-powers.UI.Attributes_4b0ed88f7d");
   for (const [id, attr] of Object.entries(CONFIG.SWADE.attributes)) attributes.append(new Option(game.i18n.localize(attr.long), id));
   const skills = document.createElement("optgroup");
-  skills.label = "Skills";
+  skills.label = sbsI18n("swade-better-powers.UI.Skills_66d0f523a3");
   for (const name of [...new Set(actor.itemTypes.skill.map(skill => skill.name))].sort()) skills.append(new Option(name));
-  select.name = "trait";
+  select.name = sbsI18n("swade-better-powers.UI.trait_982055e51c");
   select.append(attributes, skills);
-  return foundry.applications.api.DialogV2.prompt({classes: ["sbp-dialog"], window: {title: "Choose a casting trait"}, content: select.outerHTML,
-    ok: {label: "Choose", callback: (_event, button) => button.form.elements.trait.value}, rejectClose: false});
+  return foundry.applications.api.DialogV2.prompt({classes: ["sbp-dialog"], window: {title: sbsI18n("swade-better-powers.UI.Chooseacastingtrait_10237137f8")}, content: select.outerHTML,
+    ok: {label: sbsI18n("swade-better-powers.UI.Choose_c7f937836f"), callback: (_event, button) => button.form.elements.trait.value}, rejectClose: false});
 }
 
 function actorEntries(actor) {
@@ -124,26 +125,28 @@ async function castPower(actor, power, action, card, event) {
     const mods = [];
     if (power.system.actions.dmgMod) mods.push({label: power.name, value: power.system.actions.dmgMod});
     if (extra?.modifier) mods.push({label: extra.name, value: extra.modifier});
-    const roll = await power.rollDamage({additionalMods: mods, dmgOverride: extra?.override, ap: extra?.ap, isHeavyWeapon: extra?.isHeavyWeapon, flavour: extra?.name});
+    const roll = await power.rollDamage({additionalMods: mods, dmgOverride: extra?.override, ap: extra?.ap,
+      isHeavyWeapon: extra?.isHeavyWeapon, flavour: extra?.name, sbsTargetingAction: action});
     if (roll) Hooks.callAll("swadeAction", actor, power, action, roll, game.user.id);
     return roll;
   }
   if (extra?.type === "macro") {
     const macro = extra.uuid ? await foundry.utils.fromUuid(extra.uuid) : null;
     const token = extra.macroActor === "target" ? game.user.targets.first() : undefined;
-    if (extra.macroActor === "target" && !token?.actor) throw new Error("Select a target for this macro action.");
+    if (extra.macroActor === "target" && !token?.actor) throw new Error(sbsI18n("swade-better-powers.UI.Selectatargetforthismacro_02cd51ff80"));
     return macro?.execute({item: power, actor: extra.macroActor === "self" ? actor : token?.actor, token, event});
   }
   if (extra?.type === "resist") {
-    if (canvas.tokens.controlled.length !== 1) throw new Error("Select one token to make a resistance roll.");
+    if (canvas.tokens.controlled.length !== 1) throw new Error(sbsI18n("swade-better-powers.UI.Selectonetokentomakea_cad89e8401"));
     actor = canvas.tokens.controlled[0].actor;
   }
   if (action !== "formula" && !["trait", "resist"].includes(extra?.type)) return power.show();
   const trait = extra?.override || power.system.actions.trait;
   const cost = Math.max(0, card.querySelector(".pp-adjust")?.valueAsNumber ?? power.system.ppModifiers.cost);
-  if (extra?.type !== "resist" && !power.canExpendResources(cost)) return ui.notifications.warn("Not enough Power Points.");
+  if (extra?.type !== "resist" && !power.canExpendResources(cost)) return ui.notifications.warn(sbsI18n("swade-better-powers.UI.NotenoughPowerPoints_1986cc0f6c"));
   recordPowerCost(power, cost);
-  const options = {item: power, sbsPowerCost: cost, sbsResistance: extra?.type === "resist", additionalMods: [...power.traitModifiers], rof: extra?.dice ?? 1};
+  const options = {item: power, sbsPowerCost: cost, sbsResistance: extra?.type === "resist", sbsTargetingAction: action,
+    additionalMods: [...power.traitModifiers], rof: extra?.dice ?? 1};
   if (extra?.modifier) options.additionalMods.push({label: extra.name, value: extra.modifier});
   const attribute = Object.keys(CONFIG.SWADE.attributes).includes(trait) ? trait : null;
   const skill = actor.itemTypes.skill.find(skill => normalizeName(skill.name) === normalizeName(trait) || skill.system.swid === trait);
@@ -165,14 +168,14 @@ export function installPowers(wrapMethod) {
       result[key] = tab;
       if (key === "properties") {
         const active = this.tabGroups.main === "modifiers";
-        result.modifiers = {id: "modifiers", group: "main", label: "Mod/Raise", cssClass: active ? "item active" : "item", tabCssClass: `tab scrollable ${active ? "active" : ""}`, active};
+        result.modifiers = {id: "modifiers", group: "main", label: sbsI18n("swade-better-powers.UI.ModRaise_0d8044b793"), cssClass: active ? "item active" : "item", tabCssClass: `tab scrollable ${active ? "active" : ""}`, active};
       }
     }
     return result;
   });
   wrapMethod(itemSheet, "_renderHTML", async function (original, ...args) {
     const parts = await original(...args);
-    await separateModifierDescription(this.document, parts);
+    await renderModifierDescription(this.document, parts);
     return parts;
   });
   wrapMethod(itemSheet, "_processFormData", function (original, event, form, formData) {
@@ -185,7 +188,10 @@ export function installPowers(wrapMethod) {
       context.sbsEntries = actorEntries(this.actor);
       await Promise.all(context.sbsEntries.flatMap(entry => entry.powers.map(async power => {
         const item = this.actor.items.get(power.id);
-        power.description = await foundry.applications.ux.TextEditor.implementation.enrichHTML(powerDescription(item), {relativeTo: item, secrets: this.actor.isOwner});
+        [power.description, power.modifierSummary] = await Promise.all([
+          foundry.applications.ux.TextEditor.implementation.enrichHTML(descriptionWithModifiers(item.system.description, []), {relativeTo: item, secrets: this.actor.isOwner}),
+          powerModifierSummary(item, true)
+        ]);
       })));
       return context;
     });
@@ -228,7 +234,6 @@ export function installPowers(wrapMethod) {
   Hooks.on("renderApplicationV2", (app, root) => {
     if (app.document?.type === "power") {
       enableLibraryDrop(app, root);
-      alignModifierDescription(app, root);
       void renderPowerModifiers(app, root).catch(report);
     }
     const actor = app.actor;
@@ -269,7 +274,7 @@ export function installPowers(wrapMethod) {
         if (action === "pp-plus" || action === "pp-minus") {
           if (noPP(power)) return;
           const cost = button.closest(".sbs-power-card").querySelector(".pp-adjust").valueAsNumber;
-          if (!Number.isFinite(cost) || cost < 0) throw new Error("Enter a nonnegative Power Point cost.");
+          if (!Number.isFinite(cost) || cost < 0) throw new Error(sbsI18n("swade-better-powers.UI.EnteranonnegativePowerPointcost_6973aff5d2"));
           const key = `system.powerPoints.${powerArcane(power)}.value`;
           return actor.update({[key]: Math.max(0, foundry.utils.getProperty(actor, key) + (action === "pp-plus" ? cost : -cost))});
         }

@@ -1,3 +1,4 @@
+import {t as sbsI18n} from "./i18n.mjs";
 import {readPowerFlag, MODULE_ID, normalizeName} from "./constants.mjs";
 import {normalizeModifiers, normalizePowerRaises} from "./powers-data.mjs";
 import {normalizePowerChanges} from "./durations.mjs";
@@ -30,7 +31,7 @@ function templateChanges(existing, power) {
 }
 
 // Keep one ID per modifier across both editors and preserve the order of template changes.
-export function reconcileTemplateModifiers(setting, templates, source = "setting") {
+export function reconcileTemplateModifiers(setting, templates, source = sbsI18n("swade-better-powers.UI.setting_ec72b9566a")) {
   setting = normalizeModifiers(list(setting));
   templates = list(templates);
   const paired = new Map();
@@ -55,7 +56,7 @@ export function reconcileTemplateModifiers(setting, templates, source = "setting
   const templateAdditions = [];
   function add(row, template) {
     const [preferred, fallback] = source === "templates" ? [template, row] : [row, template];
-    const name = [preferred?.name, fallback?.name].find(value => typeof value === "string" && value.trim())?.trim() ?? "New modifier";
+    const name = [preferred?.name, fallback?.name].find(value => typeof value === "string" && value.trim())?.trim() ?? sbsI18n("swade-better-powers.UI.Newmodifier_d00357d3e6");
     const rawDescription = [preferred?.description, fallback?.description].find(value => typeof value === "string") ?? "";
     const description = globalThis.foundry?.utils?.cleanHTML?.(rawDescription) ?? rawDescription;
     const options = [preferred?.options, fallback?.options].map(list).find(rows => rows.length) ?? [{id: "base", label: "", cost: 0}];
@@ -79,7 +80,7 @@ export function reconcileTemplateModifiers(setting, templates, source = "setting
   return {setting: settingRows, templates: [...templates.map(row => projected.get(row)), ...templateAdditions]};
 }
 
-export function reconcileTemplateRaises(power, templates, source = "setting") {
+export function reconcileTemplateRaises(power, templates, source = sbsI18n("swade-better-powers.UI.setting_ec72b9566a")) {
   const templateRows = templates.filter(raise => Number.isSafeInteger(raise?.level) && raise.level > 0)
     .map(raise => ({...raise, id: raise.id ?? `raise-${raise.level}`}));
   const matched = new Set();

@@ -1,6 +1,7 @@
+import {t as sbsI18n} from "./i18n.mjs";
 import {applyDamageAdjustment, damagePlan, damageState} from "../../swade-better-setting/scripts/damage-dice.mjs";
 import {report, wrapMethod} from "./constants.mjs";
-import {getCast, getPowerDamageChanges} from "./cast-results.mjs";
+import {getCast, getPowerDamageChanges, getPowerDamageRaiseLevels} from "./cast-results.mjs";
 import {TEMPLATES_ID} from "./template-modifiers.mjs";
 
 const templates = () => game.modules.get(TEMPLATES_ID)?.api;
@@ -9,10 +10,10 @@ const BONUS = "sbpExplicitBonus";
 const PLAN = "sbpDamagePlan";
 function dieAmount(formula, actor, max) {
   const expression = Roll.replaceFormulaData(String(formula), actor.getRollData()).trim().replaceAll("^", "**");
-  if (!expression || !/^[\d\s.+*/%()-]+$/.test(expression) || /\/[/\*]/.test(expression)) throw new Error(`Invalid die step formula: ${formula}`);
+  if (!expression || !/^[\d\s.+*/%()-]+$/.test(expression) || /\/[/\*]/.test(expression)) throw new Error(sbsI18n("swade-better-powers.UI.Invaliddiestepformula_6bfb20f554", {p0: (formula)}));
   const number = Number(expression);
   const value = Number.isFinite(number) ? number : Roll.safeEval(expression);
-  if (!Number.isFinite(value)) throw new Error(`Invalid die step formula: ${formula}`);
+  if (!Number.isFinite(value)) throw new Error(sbsI18n("swade-better-powers.UI.Invaliddiestepformula_6bfb20f554", {p0: (formula)}));
   return Math.max(0, Math.min(max, Math.floor(value)));
 }
 
@@ -33,26 +34,28 @@ function damageMods(item, plan) {
 }
 
 export function wirePowerDamageControls(item, message, card, rollDamage) {
-  const changes = getPowerDamageChanges(message);
-  if (!changes.length || !item.actor?.isOwner || !message.isContentVisible) return;
+  if (!hasPowerDamage(message) || !item.actor?.isOwner || !message.isContentVisible) return;
   const buttons = card.querySelectorAll(".damage-rolls button[data-action]:not([data-sbt-cast-damage], [data-sbp-cast-damage])");
+  if (!buttons.length) return;
   const project = templates()?.projectDamageChanges ?? localProjection;
-  let preview = [];
+  const changes = () => getPowerDamageChanges(message, templates()?.getChatCastOptions?.(message)?.raise);
+  const previews = [];
   for (const original of buttons) {
     const action = original.dataset.action;
     const base = item.system.actions?.additional?.[action]?.override || item.system.damage;
     if (!base?.trim()) continue;
-    let plan;
-    try { plan = project(changes, base, item.actor); }
-    catch (error) { console.warn("Better Powers | Damage projection", error); }
     const button = original.cloneNode(true);
     original.replaceWith(button);
     button.dataset.sbpCastDamage = "";
-    if (plan?.adjustments.length) {
-      button.title = plan.formula;
-      if (action === "damage") button.textContent = plan.formula;
-      if (!preview.length || action === "damage") preview = plan.adjustments;
-    }
+    const primary = action === "damage";
+    previews.push({primary, render: selected => {
+      let plan;
+      try { plan = project(selected, base, item.actor); }
+      catch (error) { console.warn("Better Powers | Damage projection", error); }
+      button.title = plan?.formula ?? base;
+      if (primary) button.textContent = button.title;
+      return plan?.adjustments ?? [];
+    }});
     button.addEventListener("click", async event => {
       event.preventDefault();
       event.stopPropagation();
@@ -60,18 +63,29 @@ export function wirePowerDamageControls(item, message, card, rollDamage) {
       if (button.disabled || !actor?.isOwner || actor.items.get(item.id) !== item || !message.isContentVisible) return;
       button.disabled = true;
       try {
-        const modifiers = damageMods(item, project(changes, base, actor));
+        const modifiers = damageMods(item, project(changes(), base, actor));
         if (rollDamage) await rollDamage(action, modifiers);
         else await game.swade.itemChatCardHelper.handleAction(item, actor, action, {additionalMods: modifiers});
       } catch (error) { report(error); }
       finally { button.disabled = false; }
     });
   }
-  if (preview.length) templates()?.renderDamageAdjustments?.(card, preview, {preview: true});
+  const refresh = () => {
+    const selected = changes();
+    const primary = previews.find(entry => entry.primary) ?? previews[0];
+    for (const preview of previews) {
+      const rows = preview.render(selected);
+      if (preview === primary) templates()?.renderDamageAdjustments?.(card, rows, {preview: true});
+    }
+  };
+  card.addEventListener("sbtCastOptionsChange", refresh);
+  refresh();
 }
 
+const hasPowerDamage = message => getPowerDamageChanges(message).length || getPowerDamageRaiseLevels(message).length;
+
 function nativeDamageControls(message, html) {
-  if (!message.isContentVisible || !getPowerDamageChanges(message).length
+  if (!message.isContentVisible || !hasPowerDamage(message)
     || (game.modules.get("swade-hud")?.active && message.flags["swade-hud"]?.powerCast)) return;
   const item = foundry.utils.fromUuidSync(getCast(message).itemUuid);
   if (!item?.actor?.isOwner || (item.actor.type === "npc" && !game.user.isGM && game.settings.get("swade", "hideNpcItemChatCards"))) return;

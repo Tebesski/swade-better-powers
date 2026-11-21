@@ -11,7 +11,7 @@ const dialog = page.locator(".swade.roll-dialog");
 const formula = dialog.locator("textarea");
 const prep = dialog.getByRole("checkbox", {name: "Power Preparation"});
 const id = "swade-better-powers";
-const messageControls = () => page.locator(".chat-message").filter({has: page.locator(".sbp-effect-controls")}).last().locator(".sbp-effect-controls");
+const messageControls = () => page.locator(".chat-message").filter({has: page.locator(".sbp-effect-controls")}).last();
 
 try {
   await page.goto(process.env.FOUNDRY_QA_URL ?? "http://localhost:30001");
@@ -28,13 +28,19 @@ try {
     }}});
     const skill = await Item.create({name: "Spellcasting", type: "skill"}, {parent: caster});
     const target = await Actor.create({name: `${prefix} target`, type: "npc"});
+    const [smallShield, mediumShield] = await Item.createDocuments(["Small Shield", "Medium Shield"].map(name => ({name, type: "shield"})));
+    const shieldByEffect = {"Normal Ward": smallShield, "Extended Ward": mediumShield};
     const effects = {};
     for (const name of ["Normal Ward", "Second Ward", "Raised Ward", "Extended Ward"]) {
-      effects[name] = await Item.create({name: `${prefix} ${name}`, type: "swade-better-effects.effect", effects: [{name, type: "base"}]});
+      const shield = shieldByEffect[name];
+      const changes = shield ? [{key: "sbe.addItem", type: "add", value: {uuid: shield.uuid, equipStatus: 3}}] : [];
+      effects[name] = await Item.create({name: `${prefix} ${name}`, type: "swade-better-effects.effect", effects: [{name, type: "base", system: {changes}}]});
     }
     const [power] = await caster.createEmbeddedDocuments("Item", [{
       name: "Ward", type: "power", system: {pp: 2, duration: "1 min.", actions: {trait: "smarts"}},
-      flags: {"swade-better-setting": {powerModifiers: [{id: "reach", name: "Reach", options: [{id: "far", label: "Far", cost: 1}]}]},
+      flags: {"swade-better-setting": {powerModifiers: [{id: "reach", name: "Reach", options: [{id: "far", label: "Far", cost: 1,
+        changes: [{id: "linked-ward", type: "addEffect", enabled: true, system: {application: "chat", mode: "add",
+          effectUuid: effects["Extended Ward"].uuid, duration: {enabled: true, amount: 2, unit: "minutes"}}}]}]}]},
         [id]: {applyEffects: {modifiers: {reach: {far: effects["Extended Ward"].uuid}}}}}
     }]);
     const scene = await Scene.create({name: prefix, width: 1000, height: 1000});
@@ -44,7 +50,7 @@ try {
     ]);
     await scene.activate();
     await canvas.initializing;
-    globalThis.castQA = {caster, target, power, skill, scene, casterToken, targetToken, effects, random: CONFIG.Dice.randomUniform};
+    globalThis.castQA = {caster, target, power, skill, scene, casterToken, targetToken, effects, smallShield, mediumShield, random: CONFIG.Dice.randomUniform};
     await power.sheet.render({force: true});
     power.sheet.changeTab("properties", "main");
   }, id);
@@ -84,6 +90,12 @@ try {
   await dropEffect(editor.locator('[data-effect-slot="raised"] .sbp-effect-slot').last(), "Raised Ward");
   await page.waitForFunction(id => castQA.power.getFlag(id, "applyEffects").raised?.[0] === castQA.effects["Raised Ward"].uuid, id);
   await editor.locator('[data-effect-slot="raised"] .sbp-effect-slot').last().getByPlaceholder("Drop an Effect").waitFor();
+  await editor.locator('[data-effect-accordion="modifiers"] > summary').click();
+  await editor.locator('[data-effect-accordion="modifier-reach"] > summary').click();
+  const farMode = editor.getByRole("combobox", {name: "Base effects for Far"});
+  assert.equal(await farMode.inputValue(), "inherit");
+  await farMode.selectOption("replace");
+  await page.waitForFunction(id => castQA.power.getFlag(id, "applyEffects").modes?.modifiers?.reach?.far === "replace", id);
   await page.evaluate(() => castQA.power.sheet.close());
   await page.waitForFunction(() => canvas.ready && castQA.targetToken.object && castQA.casterToken.object);
   await page.evaluate(() => {
@@ -118,19 +130,39 @@ try {
   assert.equal(await options.getByRole("checkbox", {name: "Reach"}).isChecked(), true);
   await options.getByRole("checkbox", {name: "Raised"}).uncheck();
   await page.locator(".dialog").filter({has: options}).getByRole("button", {name: "Save"}).click();
-  await buttons.getByRole("button", {name: "Apply Effect"}).click();
+  await buttons.locator(".sbp-apply-target-effect").first().click();
   await page.waitForFunction(() => castQA.target.effects.some(effect => effect.name === "Extended Ward"));
-  assert.deepEqual(await page.evaluate(() => castQA.target.effects.map(effect => effect.name).sort()), ["Extended Ward", "Normal Ward", "Second Ward"]);
+  assert.deepEqual(await page.evaluate(() => castQA.target.effects.map(effect => effect.name)), ["Extended Ward"]);
+  await page.waitForFunction(() => castQA.target.itemTypes.shield.length === 1);
+  assert.deepEqual(await page.evaluate(() => castQA.target.itemTypes.shield.map(item => item.name)), ["Medium Shield"]);
+  assert.equal(await page.evaluate(() => castQA.target.effects.getName("Extended Ward").duration.value), 2);
   assert.ok(await page.evaluate(() => castQA.target.effects.every(effect =>
     effect.getFlag("swade-better-effects", "templateUuid") === castQA.effects[effect.name].uuid)));
   assert.equal(await page.evaluate(() => castQA.caster.effects.size), 1);
 
-  await page.evaluate(() => { void castQA.caster.rollAttribute("smarts", {item: castQA.power, additionalMods: [{label: "QA", value: 10}]}); });
+  await page.evaluate(async id => {
+    await castQA.target.deleteEmbeddedDocuments("ActiveEffect", castQA.target.effects.map(effect => effect.id));
+    await castQA.power.setFlag(id, "applyEffects.modes.modifiers.reach.far", "inherit");
+    await castQA.power.setFlag(id, "applyEffects.modifiers.reach.far", []);
+    void castQA.caster.rollAttribute("smarts", {item: castQA.power, additionalMods: [{label: "QA", value: 10}]});
+  }, id);
   await prep.waitFor();
   assert.equal(await prep.isChecked(), false);
   assert.doesNotMatch(await formula.inputValue(), /Maintining/);
+  await dialog.getByRole("button", {name: "Choose a Power Modifier"}).click();
+  await dialog.getByRole("button", {name: "Far (-1)", exact: true}).click();
   await dialog.getByRole("button", {name: "Roll", exact: true}).click();
   await page.waitForFunction(id => castQA.caster.effects.filter(effect => effect.getFlag(id, "timedPower")).length === 2, id);
+  await buttons.getByRole("button", {name: "Cast Options"}).click();
+  assert.equal(await options.getByRole("checkbox", {name: "Reach"}).isChecked(), true);
+  await options.getByRole("checkbox", {name: "Raised"}).uncheck();
+  await page.locator(".dialog").filter({has: options}).getByRole("button", {name: "Save"}).click();
+  await buttons.locator(".sbp-apply-target-effect").first().click();
+  await page.waitForFunction(() => castQA.target.effects.size === 3);
+  assert.deepEqual(await page.evaluate(() => castQA.target.effects.map(effect => effect.name).sort()), ["Extended Ward", "Normal Ward", "Second Ward"]);
+  await page.waitForFunction(() => castQA.target.itemTypes.shield.length === 2);
+  assert.deepEqual(await page.evaluate(() => castQA.target.itemTypes.shield.map(item => item.name).sort()), ["Medium Shield", "Small Shield"]);
+  assert.equal(await page.evaluate(() => Boolean(castQA.caster.effects.getName("Extended Ward"))), false);
   const prompt = page.locator(".dialog").filter({hasText: "Ward is expired. You can choose to maintain it."});
   const maintain = prompt.getByRole("button", {name: "Maintain", exact: true});
   const expire = prompt.getByRole("button", {name: "Let Expire", exact: true});
@@ -231,7 +263,15 @@ try {
   await dockEffect.waitFor({state: "detached"});
   await sidebarEffect.waitFor({state: "detached"});
   assert.deepEqual(errors, []);
-  console.log("PASS effect rows, multi-effect casting, maintenance, manual timers, and HUD deletion confirmations");
+  console.log("PASS linked Add Effect behaviors, replacement and combined shield grants, maintenance, and HUD deletion confirmations");
 } finally {
+  await page.evaluate(async () => {
+    if (!globalThis.castQA) return;
+    const {caster, target, scene, effects, smallShield, mediumShield, random} = castQA;
+    CONFIG.Dice.randomUniform = random;
+    await scene.delete();
+    await Actor.deleteDocuments([caster.id, target.id]);
+    await Item.deleteDocuments([...Object.values(effects), smallShield, mediumShield].map(item => item.id));
+  }).catch(() => {});
   await browser.close();
 }

@@ -157,6 +157,7 @@ try {
     const {shapeKey, automation} = resolveCastOptions(syncQA.api.readAutomation(syncQA.power), await syncQA.placement);
     return {shapeKey, range: automation.placementRange};
   }), {shapeKey: "large", range: {enabled: true, max: 5}});
+  await page.locator(".sbt-cast-options").waitFor({state: "detached"});
   console.log("PASS a HUD casting choice preselects the matching template modifier and resolves its automation");
 
   await templateControls.getByRole("button", {name: "Cast options"}).click();

@@ -1,3 +1,4 @@
+import {t as sbsI18n} from "./i18n.mjs";
 import {effectsAPI} from "./constants.mjs";
 import {getModifiers, modifierCostLabel, powerPointBreakdown} from "./powers-data.mjs";
 import {noPP, preparation} from "./power-rules.mjs";
@@ -21,7 +22,7 @@ function buildChooser(power, selected, changed) {
   panel.className = "sbs-casting-modifiers";
   const presets = document.createElement("div"); presets.className = "presets sbs-power-presets";
   const toggle = document.createElement("button"); toggle.type = "button"; toggle.className = "toggle-list";
-  toggle.innerHTML = '<i class="fa-solid fa-caret-right" inert></i> Choose a Power Modifier';
+  toggle.innerHTML = `<i class="fa-solid fa-caret-right" inert></i> ${sbsI18n("swade-better-powers.UI.ChooseaPowerModifier_de2733d68d")}`;
   const dropdown = document.createElement("div"); dropdown.className = "dropdown collapsed"; dropdown.setAttribute("role", "listbox");
   const list = document.createElement("ol"); list.className = "selections unmarked-list";
   const chips = document.createElement("div"); chips.className = "sbs-chosen-modifiers";
@@ -31,7 +32,7 @@ function buildChooser(power, selected, changed) {
     for (const {modifier, option} of selectedChoices(power, selected)) {
       const button = document.createElement("button"); button.type = "button";
       button.textContent = `${modifier.name}: ${option.label || modifier.name} (${modifierCostLabel(option, noPowerPoints)}) ×`;
-      button.title = "Remove this modifier from this casting";
+      button.title = sbsI18n("swade-better-powers.UI.Removethismodifierfromthiscasting_3d8bd537a9");
       button.addEventListener("click", event => {event.preventDefault(); event.stopPropagation(); selected.delete(modifier.id); changed(); refresh();});
       chips.append(button);
     }
@@ -71,7 +72,7 @@ function updateNativeCast(app) {
     penalty.sbsPowerBreakdown = castingBreakdown(power, selected ?? new Map(), cost);
     let prep = modifiers.find(mod => mod.sbpPreparation);
     if (!prep) {
-      prep = {label: "Power Preparation", value: 2, ignore: true, sbpPreparation: true};
+      prep = {label: sbsI18n("swade-better-powers.UI.PowerPreparation_956c4a395e"), value: 2, ignore: true, sbpPreparation: true};
       modifiers.splice(index, 0, prep);
     }
     prep.value = preparation(app.ctx.actor, power);
@@ -99,7 +100,7 @@ export function installCastingModifiers(wrapMethod) {
     const prepIndex = app.modifiers.findIndex(mod => mod.sbpPreparation);
     const prep = root.querySelector(`input[data-index="${prepIndex}"]`);
     if (prep && prepIndex >= 0) {
-      prep.setAttribute("aria-label", "Power Preparation");
+      prep.setAttribute("aria-label", sbsI18n("swade-better-powers.UI.PowerPreparation_956c4a395e"));
       prep.disabled = !app.modifiers[prepIndex].value;
     }
     if (!app.sbsPowerChoices || root.querySelector(".sbs-casting-modifiers")) return;
@@ -133,7 +134,7 @@ export async function installToolsCastingModifiers(wrapMethod) {
       const input = document.createElement("input");
       input.type = "checkbox";
       input.disabled = !preparation(power.actor, power);
-      row.append("Power Preparation ", input);
+      row.append(sbsI18n("swade-better-powers.UI.PowerPreparation_ecb9a8788b"), input);
       anchor.before(row);
     }
     if (!getModifiers(power).length) return;

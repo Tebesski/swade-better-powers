@@ -1,7 +1,7 @@
 import {EFFECTS_ID, MODULE_ID, effectsAPI, normalizeName, report} from "./constants.mjs";
 import {isActionBehavior, selectedBehaviors} from "./behavior-data.mjs";
 import {runPowerCode} from "./behavior-code.mjs";
-import {prepareEffect, resolveReference} from "./effect-sources.mjs";
+import {effectBehaviorSources, prepareEffectSources} from "./effect-sources.mjs";
 import {isDurationTracker} from "./maintenance.mjs";
 import {getModifiers, getPowerRaises} from "./powers-data.mjs";
 
@@ -19,13 +19,7 @@ export function castBehaviors(item, choices) {
 }
 
 async function addEffect(entry, {actor, item}) {
-  const {effectUuid, duration, effects = []} = entry.system;
-  const reference = effectUuid.trim();
-  const referenced = reference ? (await resolveReference(reference, game.user)).map(effect => effect.toObject()) : [];
-  const start = CONFIG.ActiveEffect.documentClass.getEffectStart();
-  const override = duration.enabled ? {value: duration.amount, units: duration.unit} : undefined;
-  const sources = [...referenced.map(data => ({data, reference})), ...effects.map(data => ({data}))]
-    .map(({data, reference}) => ({...prepareEffect(data, {item, reference, start, duration: override}), disabled: false}));
+  const sources = await prepareEffectSources(effectBehaviorSources(entry.system), {item, user: game.user});
   if (sources.length) await actor.createEmbeddedDocuments("ActiveEffect", sources);
 }
 

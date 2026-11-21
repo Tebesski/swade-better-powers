@@ -1,3 +1,4 @@
+import {t as sbsI18n} from "./i18n.mjs";
 import {readPowerFlag, normalizeName} from "./constants.mjs";
 import {normalizePowerBehaviors} from "./behavior-data.mjs";
 import {normalizePowerChanges} from "./durations.mjs";
@@ -17,7 +18,7 @@ export function parseArcaneSkill(description) {
 
 export function spellcastingEntries(actor) {
   const stored = Object.values(readPowerFlag(actor, "spellcastingEntries") ?? {});
-  const general = {id: GENERAL, name: "General", arcane: GENERAL, trait: "", ...stored.find(e => e.arcane === GENERAL)};
+  const general = {id: GENERAL, name: sbsI18n("swade-better-powers.UI.General_c910d474dc"), arcane: GENERAL, trait: "", ...stored.find(e => e.arcane === GENERAL)};
   const entries = stored.filter(entry => entry.arcane !== GENERAL).map(entry => ({...entry}));
   if (readPowerFlag(actor, "generalSpellcastingRemoved") !== true) entries.unshift(general);
   for (const power of actor.itemTypes?.power ?? []) {
@@ -43,7 +44,7 @@ export function castingPenalty(cost, maintained = 0) {
 export function powerPointBreakdown(name, baseCost, choices = [], totalCost = Number(baseCost) + choices.reduce((sum, choice) => sum + choice.cost, 0)) {
   const costs = [{name, cost: Number(baseCost)}, ...choices.map(choice => ({name: choice.name, cost: Number(choice.cost)}))];
   const adjustment = totalCost - costs.reduce((sum, choice) => sum + choice.cost, 0);
-  if (adjustment) costs.push({name: "Additional Power Points", cost: adjustment});
+  if (adjustment) costs.push({name: sbsI18n("swade-better-powers.UI.AdditionalPowerPoints_97510a5219"), cost: adjustment});
   const total = Math.max(0, totalCost);
   const terms = costs.map((choice, index) => index ? `${choice.cost < 0 ? "-" : "+"} ${Math.abs(choice.cost)} PP` : `${choice.cost} PP`).join(" ");
   const expression = totalCost < 0 ? `max(0, (${terms}))` : `(${terms})`;
@@ -99,15 +100,15 @@ export function getPowerRaises(item) {
 }
 export function validateModifiers(modifiers) {
   for (const modifier of modifiers) {
-    if (!modifier.name.trim()) throw new Error("Each modifier needs a name.");
-    if (!modifier.options.length) throw new Error("Each modifier needs at least one cost option.");
+    if (!modifier.name.trim()) throw new Error(sbsI18n("swade-better-powers.UI.Eachmodifierneedsaname_1fe0891771"));
+    if (!modifier.options.length) throw new Error(sbsI18n("swade-better-powers.UI.Eachmodifierneedsatleastone_078ef0c956"));
     for (const option of modifier.options) {
-      if (!Number.isFinite(option.cost)) throw new Error("Enter a numeric modifier cost.");
+      if (!Number.isFinite(option.cost)) throw new Error(sbsI18n("swade-better-powers.UI.Enteranumericmodifiercost_9e0f8821ac"));
     }
   }
   return modifiers;
 }
-export function modifierSummary(modifiers, noPP = false) {
+export function modifierSummary(modifiers, noPP = false, accordion = false) {
   if (!modifiers.length) return "";
   const rows = modifiers.map(modifier => {
     const costs = modifier.options.map(option => modifierCostLabel(option, noPP)).join(" / ");
@@ -115,5 +116,6 @@ export function modifierSummary(modifiers, noPP = false) {
     const description = (modifier.description || "").trim().replace(/^<p(?:\s[^>]*)?>([\s\S]*?)<\/p>/i, "$1");
     return `<li><strong>${escapeHTML(modifier.name)} (${costs}):</strong> ${description}</li>`;
   }).join("");
-  return `<section class="sbs-power-modifier-summary"><hr><h3>Modifiers</h3><ul>${rows}</ul></section>`;
+  if (accordion) return `<details class="sbs-power-modifier-summary"><summary>${sbsI18n("swade-better-powers.UI.Modifiers_072da57fac")}</summary><ul>${rows}</ul></details>`;
+  return `<section class="sbs-power-modifier-summary"><hr><h3>${sbsI18n("swade-better-powers.UI.Modifiers_072da57fac")}</h3><ul>${rows}</ul></section>`;
 }

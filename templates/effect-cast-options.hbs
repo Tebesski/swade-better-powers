@@ -1,10 +1,12 @@
 <div class="standard-form sbp-effect-cast-options">
-  {{#if hasRaise}}
-    <label class="checkbox"><input type="checkbox" name="raised" {{checked raised}}> Raised</label>
+  {{#if raiseOptions}}
+    <label class="form-group">{{localize "swade-better-powers.UI.Raise_0fd3685adc"}} <select name="raise">{{selectOptions raiseOptions selected=raise}}</select></label>
+  {{else if hasRaise}}
+    <label class="sbp-cast-checkbox"><input type="checkbox" name="raised" {{checked raised}}><span>{{localize "swade-better-powers.UI.Raised_b4a8bf1f6b"}}</span></label>
   {{/if}}
   {{#each modifiers}}
     <div class="form-group">
-      <label class="checkbox"><input type="checkbox" class="sbp-use-modifier" {{checked enabled}}> {{name}}</label>
+      <label class="sbp-cast-checkbox"><input type="checkbox" class="sbp-use-modifier" {{checked enabled}}><span>{{name}}</span></label>
       <select data-effect-modifier="{{id}}" aria-label="{{name}} option">
         {{#each options}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}
       </select>

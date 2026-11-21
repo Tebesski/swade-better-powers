@@ -150,7 +150,8 @@ try {
       void useItem(qa.actor, qa.power, "formula", undefined, {castCard: true, nativeOnly: true, additionalMods: [{label: "QA", value: 15}]});
     });
     await dialog.getByRole("button", {name: "Roll", exact: true}).click();
-    const hudDamage = page.locator(".swade-hud-power-cast button[data-sbp-cast-damage]").last();
+    const hudCard = page.locator(".swade-hud-power-cast").last();
+    const hudDamage = hudCard.locator(".damage-rolls button[data-action='damage']");
     await hudDamage.waitFor();
     assert.equal(await hudDamage.textContent(), "(2d6) + (5d12)");
     assert.equal(await page.evaluate(powers => qa.actor.getFlag(powers, "qaScript"), powers), 1);
@@ -158,6 +159,15 @@ try {
     assert.match(await dialog.locator("textarea").inputValue(), /2d6x.*\(5d12\)/);
     await dialog.getByRole("button", {name: "Roll", exact: true}).click();
     await page.waitForFunction(() => game.messages.some(message => message.rolls.some(roll => /2d6x.*5d12/.test(roll.formula))));
+    await hudCard.locator(".sbt-cast-template-controls").getByRole("button", {name: "Cast options"}).click();
+    await page.locator(".sbt-cast-options").getByLabel("Normal", {exact: true}).check();
+    await page.getByRole("button", {name: "Apply", exact: true}).click();
+    await page.waitForFunction(() => [...document.querySelectorAll(".swade-hud-power-cast .damage-rolls button[data-action='damage']")].at(-1)?.textContent === "2d6");
+    await hudDamage.click();
+    const normalFormula = await dialog.locator("textarea").inputValue();
+    assert.match(normalFormula, /2d6x/);
+    assert.doesNotMatch(normalFormula, /5d12/);
+    await dialog.getByRole("button", {name: "Close", exact: true}).click();
   }
   assert.deepEqual(errors, []);
   console.log("All eight behaviors, caster-only effects, rolled damage, template isolation, and shared picker persistence passed.");

@@ -4,12 +4,12 @@
       <summary>{{#if label}}{{label}} · {{/if}}{{title}}</summary>
       <div class="sbp-behavior-fields">
         <div class="sbp-behavior-header">
-          <input type="text" data-field="behaviorLabel" value="{{label}}" placeholder="{{title}}" aria-label="Behavior label" {{#unless editable}}disabled{{/unless}}>
-          <label><input type="checkbox" data-field="enabled" {{checked enabled}} {{#unless editable}}disabled{{/unless}}> Enabled</label>
+          <input type="text" data-field="behaviorLabel" value="{{label}}" placeholder="{{title}}" aria-label="{{localize "swade-better-powers.UI.Behaviorlabel_4c369b6dc1"}}" {{#unless editable}}disabled{{/unless}}>
+          <label><input type="checkbox" data-field="enabled" {{checked enabled}} {{#unless editable}}disabled{{/unless}}> {{localize "swade-better-powers.UI.Enabled_92c1cdfdf4"}}</label>
           {{#if editable}}
-            <button type="button" data-modifier-action="moveBehaviorUp" aria-label="Move behavior up" title="Move behavior up" {{#unless canMoveUp}}disabled{{/unless}}><i class="fa-solid fa-arrow-up" inert></i></button>
-            <button type="button" data-modifier-action="moveBehaviorDown" aria-label="Move behavior down" title="Move behavior down" {{#unless canMoveDown}}disabled{{/unless}}><i class="fa-solid fa-arrow-down" inert></i></button>
-            <button type="button" data-modifier-action="removeBehavior" aria-label="Remove behavior" title="Remove behavior"><i class="fa-solid fa-trash" inert></i></button>
+            <button type="button" data-modifier-action="moveBehaviorUp" aria-label="{{localize "swade-better-powers.UI.Movebehaviorup_c2f0e523c7"}}" title="{{localize "swade-better-powers.UI.Movebehaviorup_c2f0e523c7"}}" {{#unless canMoveUp}}disabled{{/unless}}><i class="fa-solid fa-arrow-up" inert></i></button>
+            <button type="button" data-modifier-action="moveBehaviorDown" aria-label="{{localize "swade-better-powers.UI.Movebehaviordown_6809c22552"}}" title="{{localize "swade-better-powers.UI.Movebehaviordown_6809c22552"}}" {{#unless canMoveDown}}disabled{{/unless}}><i class="fa-solid fa-arrow-down" inert></i></button>
+            <button type="button" data-modifier-action="removeBehavior" aria-label="{{localize "swade-better-powers.UI.Removebehavior_47c549106a"}}" title="{{localize "swade-better-powers.UI.Removebehavior_47c549106a"}}"><i class="fa-solid fa-trash" inert></i></button>
           {{/if}}
         </div>
         {{#each fields}}
@@ -20,7 +20,7 @@
               {{#if select}}<select data-field="{{key}}" aria-label="{{label}}" {{#unless ../editable}}disabled{{/unless}}>{{selectOptions options selected=value}}</select>
               {{else if textarea}}<textarea data-field="{{key}}" aria-label="{{label}}" rows="{{#if (eq key 'script')}}7{{else}}3{{/if}}" {{#unless ../editable}}disabled{{/unless}}>{{value}}</textarea>
               {{else}}<span class="sbp-behavior-input"><input type="{{inputType}}" data-field="{{key}}" aria-label="{{label}}" value="{{value}}" min="0" step="1" {{#if drop}}data-behavior-drop="{{type}}"{{/if}} {{#unless ../editable}}disabled{{/unless}}>
-                {{#if effect}}{{#if ../editable}}<button type="button" data-modifier-action="pickBehaviorEffect" aria-label="Browse effects" title="Browse effects"><i class="fa-solid fa-list" inert></i></button>{{/if}}{{/if}}
+                {{#if effect}}{{#if ../editable}}<button type="button" data-modifier-action="pickBehaviorEffect" aria-label="{{localize "swade-better-powers.UI.Browseeffects_109de40dc0"}}" title="{{localize "swade-better-powers.UI.Browseeffects_109de40dc0"}}"><i class="fa-solid fa-list" inert></i></button>{{/if}}{{/if}}
               </span>{{/if}}
             </div>
           {{/if}}
@@ -29,13 +29,13 @@
           {{#each inlineEffects}}
             <div class="sbp-behavior-effect"><img src="{{img}}" alt=""><span>{{name}}</span>
               {{#if ../editable}}
-                {{#if @root.canEditEffects}}<button type="button" data-modifier-action="editBehaviorEffect" data-effect-index="{{@index}}" aria-label="Edit effect with A.E.G.I.S." title="Edit effect with A.E.G.I.S."><i class="fa-solid fa-pen" inert></i></button>{{/if}}
-                <button type="button" data-modifier-action="removeBehaviorEffect" data-effect-index="{{@index}}" aria-label="Remove inline effect" title="Remove inline effect"><i class="fa-solid fa-trash" inert></i></button>
+                {{#if @root.canEditEffects}}<button type="button" data-modifier-action="editBehaviorEffect" data-effect-index="{{@index}}" aria-label="{{localize "swade-better-powers.UI.EditeffectwithAEG_9b6b6e2f04"}}" title="{{localize "swade-better-powers.UI.EditeffectwithAEG_9b6b6e2f04"}}"><i class="fa-solid fa-pen" inert></i></button>{{/if}}
+                <button type="button" data-modifier-action="removeBehaviorEffect" data-effect-index="{{@index}}" aria-label="{{localize "swade-better-powers.UI.Removeinlineeffect_129a07d813"}}" title="{{localize "swade-better-powers.UI.Removeinlineeffect_129a07d813"}}"><i class="fa-solid fa-trash" inert></i></button>
               {{/if}}
             </div>
           {{/each}}
           {{#if editable}}{{#if @root.canEditEffects}}
-            <button type="button" data-modifier-action="editBehaviorEffect"><i class="fa-solid fa-shield-quartered" inert></i> Construct with A.E.G.I.S.</button>
+            <button type="button" data-modifier-action="editBehaviorEffect"><i class="fa-solid fa-shield-quartered" inert></i> {{localize "swade-better-powers.UI.ConstructwithAEGI_621c913e88"}}</button>
           {{/if}}{{/if}}
         {{/if}}
       </div>
@@ -43,7 +43,7 @@
   {{/each}}
   {{#if showAdd}}
   {{#if @root.editable}}
-    <button type="button" class="sbs-add-option" data-modifier-action="addBehavior"><i class="fa-solid fa-plus" inert></i> {{#if addLabel}}{{addLabel}}{{else}}Add behavior{{/if}}</button>
+    <button type="button" class="sbs-add-option" data-modifier-action="addBehavior"><i class="fa-solid fa-plus" inert></i> {{#if addLabel}}{{addLabel}}{{else}}{{localize "swade-better-powers.UI.Addbehavior_d557d5e8f8"}}{{/if}}</button>
   {{/if}}
   {{/if}}
 {{/inline}}
@@ -51,48 +51,48 @@
 {{#if libraryOption}}
   {{> powerBehaviors libraryOption showAdd=true addLabel="Add Power Modifier"}}
 {{else}}
-<div class="sbs-modifiers-heading"><h3>Modifiers</h3>{{#if editable}}<div class="sbp-modifier-buttons"><button type="button" data-modifier-action="add"><i class="fa-solid fa-plus" inert></i> Add modifier</button><button type="button" data-modifier-action="pickLibrary" data-tooltip="Choose an individual modifier" aria-label="Choose an individual modifier"><i class="fa-solid fa-list" inert></i></button></div>{{/if}}</div>
+<div class="sbs-modifiers-heading"><h3>{{localize "swade-better-powers.UI.Modifiers_072da57fac"}}</h3>{{#if editable}}<div class="sbp-modifier-buttons"><button type="button" data-modifier-action="add"><i class="fa-solid fa-plus" inert></i> {{localize "swade-better-powers.UI.Addmodifier_9a9d652052"}}</button><button type="button" data-modifier-action="pickLibrary" data-tooltip="{{localize "swade-better-powers.UI.Chooseanindividualmodifier_ddc4affb0e"}}" aria-label="{{localize "swade-better-powers.UI.Chooseanindividualmodifier_ddc4affb0e"}}"><i class="fa-solid fa-list" inert></i></button></div>{{/if}}</div>
 {{#each modifiers}}
 <details class="sbs-modifier" data-id="{{id}}" {{#if expanded}}open{{/if}}>
   <summary class="sbs-modifier-name">
-    {{#if @root.canSaveToLibrary}}<span class="sbp-modifier-drag" draggable="true" data-modifier-drag title="Drag to Modifiers Compendium"><i class="fa-solid fa-grip-vertical" inert></i></span>{{/if}}
-    <input type="text" data-field="name" value="{{name}}" placeholder="Modifier name" aria-label="Modifier name" {{#unless @root.editable}}disabled{{/unless}}>
+    {{#if @root.canSaveToLibrary}}<span class="sbp-modifier-drag" draggable="true" data-modifier-drag title="{{localize "swade-better-powers.UI.DragtoModifiersCompendium_97bfe347bc"}}"><i class="fa-solid fa-grip-vertical" inert></i></span>{{/if}}
+    <input type="text" data-field="name" value="{{name}}" placeholder="{{localize "swade-better-powers.UI.Modifiername_28221db4cc"}}" aria-label="{{localize "swade-better-powers.UI.Modifiername_28221db4cc"}}" {{#unless @root.editable}}disabled{{/unless}}>
     {{#if @root.editable}}
-      {{#if @root.canSaveToLibrary}}<a role="button" tabindex="0" data-modifier-action="saveToLibrary" title="Add to Modifiers Compendium" aria-label="Add to Modifiers Compendium"><i class="fa-solid fa-book" inert></i></a>{{/if}}
-      <a role="button" tabindex="0" data-modifier-action="remove" title="Delete modifier"><i class="fa-solid fa-trash" inert></i></a>
+      {{#if @root.canSaveToLibrary}}<a role="button" tabindex="0" data-modifier-action="saveToLibrary" title="{{localize "swade-better-powers.UI.AddtoModifiersCompendium_368cecf1d8"}}" aria-label="{{localize "swade-better-powers.UI.AddtoModifiersCompendium_368cecf1d8"}}"><i class="fa-solid fa-book" inert></i></a>{{/if}}
+      <a role="button" tabindex="0" data-modifier-action="remove" title="{{localize "swade-better-powers.UI.Deletemodifier_b31312d790"}}"><i class="fa-solid fa-trash" inert></i></a>
     {{/if}}
-    <a role="button" tabindex="0" data-modifier-action="toggle" aria-label="Expand modifier" aria-expanded="{{expanded}}"><i class="fa-solid fa-chevron-down" inert></i></a>
+    <a role="button" tabindex="0" data-modifier-action="toggle" aria-label="{{localize "swade-better-powers.UI.Expandmodifier_c5b8411d0f"}}" aria-expanded="{{expanded}}"><i class="fa-solid fa-chevron-down" inert></i></a>
   </summary>
   <div class="sbs-modifier-body">
     <div class="editor-container sbs-modifier-description"><prose-mirror name="sbs-modifier-{{id}}" value="{{description}}" data-placeholder="Description..." editable="{{@root.editable}}" toggled>{{{description}}}</prose-mirror></div>
     {{#each options}}
       <div class="sbp-modifier-option" data-option-id="{{id}}">
         <div class="sbs-cost-option" data-id="{{id}}">
-          <input type="text" data-field="label" value="{{label}}" placeholder="Option name" aria-label="Option name" {{#unless @root.editable}}disabled{{/unless}}>
-          <span class="sbs-option-cost">(<span contenteditable="{{@root.editable}}" role="textbox" inputmode="decimal" data-field="cost" data-pp-cost="{{cost}}" data-placeholder="N" aria-label="Modifier cost" {{#if @root.noPowerPoints}}title="No Power Points penalty. Focus to edit the PP cost."{{/if}}>{{costText}}</span>)</span>
+          <input type="text" data-field="label" value="{{label}}" placeholder="{{localize "swade-better-powers.UI.Optionname_f11b303eb8"}}" aria-label="{{localize "swade-better-powers.UI.Optionname_f11b303eb8"}}" {{#unless @root.editable}}disabled{{/unless}}>
+          <span class="sbs-option-cost">(<span contenteditable="{{@root.editable}}" role="textbox" inputmode="decimal" data-field="cost" data-pp-cost="{{cost}}" data-placeholder="{{localize "swade-better-powers.UI.N_8ce86a6ae6"}}" aria-label="{{localize "swade-better-powers.UI.Modifiercost_04d57d904e"}}" {{#if @root.noPowerPoints}}title="{{localize "swade-better-powers.UI.NoPowerPointspenaltyFocusto_1b3751310d"}}"{{/if}}>{{costText}}</span>)</span>
           {{#if @root.editable}}
-            <button type="button" class="sbp-add-behavior-icon" data-modifier-action="addBehavior" title="Add behavior" aria-label="Add behavior"><i class="fa-solid fa-list-check" inert></i></button>
+            <button type="button" class="sbp-add-behavior-icon" data-modifier-action="addBehavior" title="{{localize "swade-better-powers.UI.Addbehavior_d557d5e8f8"}}" aria-label="{{localize "swade-better-powers.UI.Addbehavior_d557d5e8f8"}}"><i class="fa-solid fa-list-check" inert></i></button>
             {{#if removable}}
-              <a role="button" tabindex="0" data-modifier-action="removeOption" title="Delete option" aria-label="Delete option"><i class="fa-solid fa-xmark" inert></i></a>
+              <a role="button" tabindex="0" data-modifier-action="removeOption" title="{{localize "swade-better-powers.UI.Deleteoption_6095714905"}}" aria-label="{{localize "swade-better-powers.UI.Deleteoption_6095714905"}}"><i class="fa-solid fa-xmark" inert></i></a>
             {{/if}}
           {{/if}}
         </div>
         {{> powerBehaviors}}
       </div>
     {{/each}}
-    {{#if @root.editable}}<button type="button" class="sbs-add-option" data-modifier-action="addOption"><i class="fa-solid fa-plus" inert></i> Add Modifier option</button>{{/if}}
+    {{#if @root.editable}}<button type="button" class="sbs-add-option" data-modifier-action="addOption"><i class="fa-solid fa-plus" inert></i> {{localize "swade-better-powers.UI.AddModifieroption_7c3987899a"}}</button>{{/if}}
   </div>
 </details>
 {{/each}}
 
 
-<div class="sbs-modifiers-heading"><h3>Raises</h3>{{#if editable}}<button type="button" data-modifier-action="addRaise"><i class="fa-solid fa-plus" inert></i> Add raise</button>{{/if}}</div>
+<div class="sbs-modifiers-heading"><h3>{{localize "swade-better-powers.UI.Raises_e97e76330f"}}</h3>{{#if editable}}<button type="button" data-modifier-action="addRaise"><i class="fa-solid fa-plus" inert></i> {{localize "swade-better-powers.UI.Addraise_c7ed5045f3"}}</button>{{/if}}</div>
 {{#each raises}}
   <details class="sbp-raise" data-variant-accordion data-id="{{id}}" {{#if expanded}}open{{/if}}>
-    <summary>Raised {{level}}</summary>
+    <summary>{{localize "swade-better-powers.UI.Raised_b4a8bf1f6b"}} {{level}}</summary>
     <div class="sbp-raise-fields">
-      <label>Raise level <input type="number" data-field="level" value="{{level}}" min="1" step="1" {{#unless @root.editable}}disabled{{/unless}}></label>
-      {{#if @root.editable}}<button type="button" data-modifier-action="removeRaise"><i class="fa-solid fa-trash" inert></i> Remove raise</button>{{/if}}
+      <label>{{localize "swade-better-powers.UI.Raiselevel_e5a6e6f425"}} <input type="number" data-field="level" value="{{level}}" min="1" step="1" {{#unless @root.editable}}disabled{{/unless}}></label>
+      {{#if @root.editable}}<button type="button" data-modifier-action="removeRaise"><i class="fa-solid fa-trash" inert></i> {{localize "swade-better-powers.UI.Removeraise_1179565d57"}}</button>{{/if}}
     </div>
     {{> powerBehaviors showAdd=true}}
   </details>

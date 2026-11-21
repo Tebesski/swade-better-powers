@@ -1,3 +1,4 @@
+import {t as sbsI18n} from "./i18n.mjs";
 import {MODULE_ID} from "./constants.mjs";
 import {isCodeBehavior} from "./behavior-data.mjs";
 
@@ -14,7 +15,7 @@ async function executable(entry) {
   if (entry.type === "executeMacro") {
     if (!entry.system.macroUuid.trim()) return null;
     const macro = await foundry.utils.fromUuid(entry.system.macroUuid);
-    if (macro?.documentName !== "Macro") throw new Error("Choose an existing macro.");
+    if (macro?.documentName !== "Macro") throw new Error(sbsI18n("swade-better-powers.UI.Chooseanexistingmacro_6349c39dc0"));
     return {signature: [entry.id, macro.uuid, macro.type, macro.command], run: context => macro.execute({...context, speaker: context.message.speaker})};
   }
   const source = entry.system.script.trim();
@@ -41,7 +42,7 @@ export async function runPowerCode(entry, context) {
   const code = await executable(entry);
   if (!code) return;
   if (!game.settings.get(MODULE_ID, KEY).includes(JSON.stringify(code.signature))) {
-    throw new Error("A GM must save this power macro or script in Mod/Raise before it can run.");
+    throw new Error(sbsI18n("swade-better-powers.UI.AGMmustsavethispower_8edca6ebdd"));
   }
   await code.run(context);
 }

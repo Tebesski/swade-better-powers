@@ -1,35 +1,51 @@
 {
-   "id": "swade-better-powers",
-   "title": "SWADE Better Powers",
-   "description": "Powers automation for SWADE..",
-   "version": "#{VERSION}#",
-   "compatibility": {
-      "minimum": "14",
-      "verified": "14",
-      "maximum": "14"
-   },
-   "relationships": {
-      "systems": [
-         {
-            "id": "swade",
-            "type": "system",
-            "compatibility": {
-               "minimum": "6.0.0"
-            }
-         }
-      ],
-      "requires": [{ "id": "swade-better-setting", "type": "module" }],
-      "recommends": [
-         {
-            "id": "swade-better-effects",
-            "type": "module",
-            "reason": "Use Effect templates and configure or suppress power roll modifiers."
-         }
-      ]
-   },
-   "esmodules": ["scripts/main.mjs"],
-   "styles": ["styles/better-powers.css"],
-   "url": "#{URL}#",
-   "manifest": "#{MANIFEST}#",
-   "download": "#{DOWNLOAD}#"
+  "id": "swade-better-powers",
+  "title": "SWADE Better Powers",
+  "description": "Powers automation for SWADE..",
+  "version": "#{VERSION}#",
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14",
+    "maximum": "14"
+  },
+  "relationships": {
+    "systems": [
+      {
+        "id": "swade",
+        "type": "system",
+        "compatibility": {
+          "minimum": "6.0.0"
+        }
+      }
+    ],
+    "requires": [
+      {
+        "id": "swade-better-setting",
+        "type": "module"
+      }
+    ],
+    "recommends": [
+      {
+        "id": "swade-better-effects",
+        "type": "module",
+        "reason": "Use Effect templates and configure or suppress power roll modifiers."
+      }
+    ]
+  },
+  "esmodules": [
+    "scripts/main.mjs"
+  ],
+  "styles": [
+    "styles/better-powers.css"
+  ],
+  "url": "#{URL}#",
+  "manifest": "#{MANIFEST}#",
+  "download": "#{DOWNLOAD}#",
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ]
 }
