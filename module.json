@@ -1,7 +1,7 @@
 {
   "id": "swade-better-powers",
   "title": "SWADE Better Powers",
-  "description": "Powers automation for SWADE..",
+  "description": "Powers automation for SWADE.",
   "version": "#{VERSION}#",
   "compatibility": {
     "minimum": "14",
