@@ -2,7 +2,7 @@ import {t as sbsI18n} from "./i18n.mjs";
 import {MODULE_ID, report} from "./constants.mjs";
 import {powerDuration} from "./cast-results.mjs";
 import {createPowerTimer, editPowerTimer, isDurationTracker, isPowerTimer, powerDurationEnded, timerName, timerProgress} from "./maintenance.mjs";
-import {noPP} from "./power-rules.mjs";
+import {noPP, noPPForActor} from "./powers-data.mjs";
 import {DURATION_UNITS} from "./durations.mjs";
 
 const {ApplicationV2, HandlebarsApplicationMixin} = foundry.applications.api;
@@ -74,7 +74,8 @@ class PowerTimers extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
-    const powers = this.actor.itemTypes.power.filter(power => noPP(power) && powerDuration(power))
+    const usesNoPP = noPPForActor(this.actor);
+    const powers = this.actor.itemTypes.power.filter(power => usesNoPP(power) && powerDuration(power))
       .sort((a, b) => a.name.localeCompare(b.name))
       .map(power => ({id: power.id, label: `${power.name} (${power.system.duration})`}));
     const timers = this.actor.effects.filter(isPowerTimer).map(effect => {

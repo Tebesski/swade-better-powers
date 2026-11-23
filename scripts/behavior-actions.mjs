@@ -4,10 +4,11 @@ import {runPowerCode} from "./behavior-code.mjs";
 import {effectBehaviorSources, prepareEffectSources} from "./effect-sources.mjs";
 import {isDurationTracker} from "./maintenance.mjs";
 import {getModifiers, getPowerRaises} from "./powers-data.mjs";
+import {findCastMessage, RESOLVED_BEHAVIORS} from "./cast-history.mjs";
 
-export function castBehaviors(item, choices) {
+export function castBehaviors(item, choices = {}, available = Object.keys(choices).length ? getModifiers(item) : []) {
   const withSource = (changes, source) => (changes ?? []).map(change => ({source, change}));
-  const modifiers = getModifiers(item).flatMap(modifier => {
+  const modifiers = available.flatMap(modifier => {
     const selected = choices?.[modifier.id];
     const option = modifier.options.find(row => row.id === selected);
     if (!option) return [];
@@ -53,17 +54,15 @@ async function chatMessage(entry, {actor, item, message, token}) {
 }
 
 const actions = {addEffect, removeEffect, chatMessage, executeMacro: runPowerCode, executeScript: runPowerCode};
-const FINISHED = "resolvedPowerBehaviors";
-
 export async function runCastBehaviors(message, cast, earned) {
-  if (message.author?.id !== game.user.id || game.messages.some(other => other.getFlag(MODULE_ID, FINISHED) === cast.id)) return;
+  if (message.author?.id !== game.user.id) return;
   const item = await foundry.utils.fromUuid(cast.itemUuid);
   const actor = item?.actor;
   if (item?.type !== "power" || !actor?.isOwner || actor.uuid !== cast.actorUuid || actor.items.get(item.id) !== item) return;
   const chosen = selectedBehaviors(castBehaviors(item, cast.modifierOptions), earned, isActionBehavior);
-  if (!chosen.length) return;
+  if (!chosen.length || findCastMessage(RESOLVED_BEHAVIORS, cast.id)) return;
   // Record the first successful execution before side effects can create further messages or roll updates.
-  await message.setFlag(MODULE_ID, FINISHED, cast.id);
+  await message.setFlag(MODULE_ID, RESOLVED_BEHAVIORS, cast.id);
   const speakerToken = game.scenes.get(message.speaker.scene)?.tokens.get(message.speaker.token);
   const token = actor.token ?? (speakerToken?.actor?.uuid === actor.uuid ? speakerToken : undefined);
   const context = {actor, item, message, token: token?.object ?? token, roll: message.rolls.find(roll => !roll.isCritFailConfirmationRoll), cast};

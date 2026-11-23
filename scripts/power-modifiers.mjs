@@ -8,10 +8,12 @@ import {POWER_MODIFIERS, POWER_RAISES, templateModifierPatch, syncTemplateModifi
 
 const pending = new Map();
 export function descriptionWithModifiers(description, modifiers, noPowerPoints = false) {
+  const summary = modifierSummary(normalizeModifiers(modifiers), noPowerPoints);
+  if (!description?.includes("sbs-power-modifier-summary")) return (description ?? "") + summary;
   const container = document.createElement("div");
   container.innerHTML = description ?? "";
   container.querySelectorAll(".sbs-power-modifier-summary").forEach(el => el.remove());
-  return container.innerHTML + modifierSummary(normalizeModifiers(modifiers), noPowerPoints);
+  return container.innerHTML + summary;
 }
 
 export function powerDescription(item) {
@@ -57,12 +59,15 @@ export async function renderModifierDescription(item, parts) {
 }
 
 function queuePowerUpdate(item, update) {
-  const previous = pending.get(item.uuid) ?? Promise.resolve();
+  const key = item.uuid;
+  const previous = pending.get(key) ?? Promise.resolve();
   const next = previous.catch(() => {}).then(() => {
     if (!item.isOwner) throw new Error(sbsI18n("swade-better-powers.UI.Youdonothavepermissionto_314d6ef3e3"));
     return update();
   });
-  pending.set(item.uuid, next);
+  pending.set(key, next);
+  const clear = () => { if (pending.get(key) === next) pending.delete(key); };
+  void next.then(clear, clear);
   return next;
 }
 

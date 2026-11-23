@@ -106,9 +106,16 @@ function pickCastingTrait(actor) {
 }
 
 function actorEntries(actor) {
+  const powersByArcane = new Map();
+  for (const power of actor.itemTypes.power) {
+    const arcane = normalizeName(powerArcane(power));
+    if (!powersByArcane.has(arcane)) powersByArcane.set(arcane, []);
+    powersByArcane.get(arcane).push(power);
+  }
+  const worldNoPP = game.settings.get("swade", "noPowerPoints");
   return spellcastingEntries(actor).map(entry => {
-    const powers = actor.itemTypes.power.filter(power => normalizeName(powerArcane(power)) === normalizeName(entry.arcane));
-    return {...entry, noPP: entry.noPowerPoints ?? game.settings.get("swade", "noPowerPoints"),
+    const powers = powersByArcane.get(normalizeName(entry.arcane)) ?? [];
+    return {...entry, noPP: entry.noPowerPoints ?? worldNoPP,
       value: actor.system.powerPoints[entry.arcane]?.value ?? 0, max: actor.system.powerPoints[entry.arcane]?.max ?? 0,
       powers: powers.sort((a,b) => a.sort - b.sort).map(power => ({
         id: power.id, uuid: power.uuid, name: power.name, img: power.img, system: power.system,
@@ -117,6 +124,26 @@ function actorEntries(actor) {
         templates: Object.entries(power.system.templates ?? {}).filter(([, enabled]) => enabled).map(([key]) => ({key, label: CONFIG.SWADE.templates?.[key] ?? key}))
       }))};
   });
+}
+
+async function loadPowerDescription(actor, details) {
+  if (!details.open || !details.matches(".sbs-power > details") || details.dataset.sbpDescriptionLoaded) return;
+  const item = actor.items.get(details.parentElement.dataset.itemId);
+  if (!item) return;
+  const field = details.querySelector(".sbs-power-description");
+  details.dataset.sbpDescriptionLoaded = "true";
+  try {
+    const [description, summary] = await Promise.all([
+      foundry.applications.ux.TextEditor.implementation.enrichHTML(descriptionWithModifiers(item.system.description, []), {relativeTo: item, secrets: actor.isOwner}),
+      powerModifierSummary(item, true)
+    ]);
+    if (!details.isConnected) return;
+    field.innerHTML = description;
+    if (summary) field.insertAdjacentHTML("afterend", summary);
+  } catch (error) {
+    delete details.dataset.sbpDescriptionLoaded;
+    throw error;
+  }
 }
 
 async function castPower(actor, power, action, card, event) {
@@ -186,13 +213,6 @@ export function installPowers(wrapMethod) {
     wrapMethod(Sheet.prototype, "_prepareContext", async function (original, ...args) {
       const context = await original(...args);
       context.sbsEntries = actorEntries(this.actor);
-      await Promise.all(context.sbsEntries.flatMap(entry => entry.powers.map(async power => {
-        const item = this.actor.items.get(power.id);
-        [power.description, power.modifierSummary] = await Promise.all([
-          foundry.applications.ux.TextEditor.implementation.enrichHTML(descriptionWithModifiers(item.system.description, []), {relativeTo: item, secrets: this.actor.isOwner}),
-          powerModifierSummary(item, true)
-        ]);
-      })));
       return context;
     });
     // Both SWADE actor sheets include Powers inside the main "sheet" part.
@@ -237,7 +257,18 @@ export function installPowers(wrapMethod) {
       void renderPowerModifiers(app, root).catch(report);
     }
     const actor = app.actor;
-    if (!["character", "npc"].includes(actor?.type) || !app.isEditable || root.dataset.sbsPowersListener) return;
+    if (!["character", "npc"].includes(actor?.type)) return;
+    const powersTab = root.querySelector(".sbs-powers");
+    if (powersTab) {
+      if (!powersTab.dataset.sbpDescriptionListener) {
+        powersTab.dataset.sbpDescriptionListener = "true";
+        powersTab.addEventListener("toggle", event => {
+          if (event.target instanceof HTMLDetailsElement) void loadPowerDescription(app.actor, event.target).catch(report);
+        }, {capture: true});
+      }
+      for (const details of powersTab.querySelectorAll(".sbs-power > details[open]")) void loadPowerDescription(actor, details).catch(report);
+    }
+    if (!app.isEditable || root.dataset.sbsPowersListener) return;
     root.dataset.sbsPowersListener = "true";
     root.addEventListener("keydown", event => {
       if (["Enter", " "].includes(event.key) && event.target.matches('a[role="button"][data-sbs-power-action]')) {
@@ -260,8 +291,12 @@ export function installPowers(wrapMethod) {
       const button = event.target.closest('[data-sbs-power-action], [data-action="createDocument"][data-type="power"]');
       if (!button) return;
       event.preventDefault(); event.stopImmediatePropagation();
-      const entry = spellcastingEntries(actor).find(e => e.id === button.closest("[data-sbs-entry]")?.dataset.sbsEntry) ?? spellcastingEntries(actor)[0];
       const action = button.dataset.sbsPowerAction ?? "add";
+      let entry;
+      if (["add", "settings", "refresh"].includes(action)) {
+        const entries = spellcastingEntries(actor);
+        entry = entries.find(e => e.id === button.closest("[data-sbs-entry]")?.dataset.sbsEntry) ?? entries[0];
+      }
       const power = actor.items.get(button.closest("[data-item-id]")?.dataset.itemId);
       const run = async () => {
         if (action === "add") return openPowers(actor, entry);

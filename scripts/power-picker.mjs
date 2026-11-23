@@ -62,16 +62,26 @@ export class PowerPicker extends HandlebarsApplicationMixin(ApplicationV2) {
   async _onRender(context, options) {
     await super._onRender(context, options);
     const search = this.element.querySelector('input[type="search"]');
+    const empty = this.element.querySelector(".sbs-empty");
+    const groups = [...this.element.querySelectorAll(".sbs-group")].map(group => ({group,
+      rows: [...group.querySelectorAll(".sbs-row")].map(row => ({row, name: normalizeName(row.dataset.name)}))
+    }));
     search.addEventListener("input", () => {
-      let count = 0;
-      for (const group of this.element.querySelectorAll(".sbs-group")) {
-        let visible = 0;
-        for (const row of group.querySelectorAll(".sbs-row")) { row.hidden = !normalizeName(row.dataset.name).includes(normalizeName(search.value)); if (!row.hidden) visible++; }
-        group.hidden = !visible; count += visible;
+      const query = normalizeName(search.value);
+      let found = false;
+      for (const {group, rows} of groups) {
+        let visible = false;
+        for (const {row, name} of rows) {
+          const hidden = !name.includes(query);
+          if (row.hidden !== hidden) row.hidden = hidden;
+          visible ||= !hidden;
+        }
+        group.hidden = !visible;
+        found ||= visible;
       }
-      this.element.querySelector(".sbs-empty").hidden = !!count;
+      empty.hidden = found;
     });
-    this.element.querySelector(".sbs-empty").hidden = !!this.sources.length;
+    empty.hidden = !!this.sources.length;
     search.focus();
   }
 }

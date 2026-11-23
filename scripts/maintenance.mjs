@@ -1,13 +1,17 @@
 import {t as sbsI18n} from "./i18n.mjs";
 import {EFFECTS_ID, MAINTENANCE, MODULE_ID, report, wrapMethod} from "./constants.mjs";
 import {DURATION_UNITS, durationRates} from "./durations.mjs";
+import {findCastMessage, MAINTAINED_CAST} from "./cast-history.mjs";
 
 const timing = effect => effect.flags?.[MODULE_ID]?.timedPower;
 const legacy = effect => !timing(effect) && effect.flags?.[MODULE_ID]?.maintenance === true;
 const linkedTimer = effect => effect.flags?.[MODULE_ID]?.powerTimer;
 function* linkedEffects(timer) {
-  for (const actor of [...game.actors, ...[...game.scenes].flatMap(scene => scene.tokens.filter(token => !token.actorLink).map(token => token.actor))]) {
-    if (actor) yield* actor.effects.filter(effect => linkedTimer(effect) === timer.uuid);
+  const uuid = timer.uuid;
+  for (const actor of game.actors) yield* actor.effects.filter(effect => linkedTimer(effect) === uuid);
+  for (const scene of game.scenes) for (const token of scene.tokens) {
+    if (token.actorLink || !token.delta?.effects?.some(effect => linkedTimer(effect) === uuid)) continue;
+    if (token.actor) yield* token.actor.effects.filter(effect => linkedTimer(effect) === uuid);
   }
 }
 export const isPowerTimer = effect => Boolean(timing(effect) || legacy(effect));
@@ -27,21 +31,33 @@ export async function createPowerTimer(item, duration, {id, userId = game.user.i
 
 export async function trackPowerDuration(message, cast, {restoreMissing = false} = {}) {
   const item = await foundry.utils.fromUuid(cast.itemUuid);
-  const actor = await foundry.utils.fromUuid(cast.actorUuid);
-  if (!actor?.isOwner || item?.actor?.uuid !== actor.uuid) return;
-  if (actor.effects.has(cast.id) || (!restoreMissing && game.messages.some(other => other.getFlag(MODULE_ID, "maintainedCast") === cast.id))) return;
+  const actor = item?.actor;
+  if (!actor?.isOwner || actor.uuid !== cast.actorUuid) return;
+  if (actor.effects.has(cast.id) || (!restoreMissing && findCastMessage(MAINTAINED_CAST, cast.id))) return;
   const effect = await createPowerTimer(item, cast.duration, {id: cast.id, userId: message.author.id});
-  if (effect) await message.setFlag(MODULE_ID, "maintainedCast", cast.id);
+  if (effect) await message.setFlag(MODULE_ID, MAINTAINED_CAST, cast.id);
+}
+
+let timerUuids;
+function indexTimer(effect) {
+  if (isPowerTimer(effect) && effect.actor?.uuid === effect.parent?.uuid) timerUuids.add(effect.uuid);
+}
+
+function timerIndex() {
+  if (timerUuids) return timerUuids;
+  timerUuids = new Set();
+  for (const actor of game.actors) for (const effect of actor.effects) indexTimer(effect);
+  for (const scene of game.scenes) for (const token of scene.tokens) {
+    if (token.actorLink || !token.delta?.effects?.some(isPowerTimer)) continue;
+    for (const effect of token.actor?.effects ?? []) indexTimer(effect);
+  }
+  return timerUuids;
 }
 
 function* timedEffects() {
-  for (const actor of game.actors) {
-    if (actor.isOwner) yield* actor.effects.filter(isPowerTimer);
-  }
-  for (const scene of game.scenes) for (const token of scene.tokens) {
-    if (token.actorLink || !token.delta?.effects?.some(isPowerTimer)) continue;
-    const actor = token.actor;
-    if (actor?.isOwner) yield* actor.effects.filter(isPowerTimer);
+  for (const uuid of timerIndex()) {
+    const effect = foundry.utils.fromUuidSync(uuid);
+    if (effect?.actor?.isOwner && isPowerTimer(effect)) yield effect;
   }
 }
 
@@ -96,6 +112,7 @@ export async function editPowerTimer(effect, {value, units, elapsed}) {
 
 let expirationPrompt;
 async function resolveExpiration(effect) {
+  if (effect.actor.effects.get(effect.id) !== effect) return;
   if (!effect.duration.expired) await effect.update({"duration.expired": true}, {animate: false});
   const {name} = timing(effect);
   const content = document.createElement("p");
@@ -122,8 +139,9 @@ async function resolveExpiration(effect) {
     [`flags.${MODULE_ID}.maintenance`]: periods,
     [`flags.${EFFECTS_ID}.tags`]: [...new Set([...tags, MAINTENANCE])]
   }, {animate: false});
+  const {start, duration} = effect.toObject();
   for (const linked of linkedEffects(effect)) await linked.update({
-    start: effect.toObject().start, duration: {...effect.toObject().duration, expired: false}
+    start, duration: {...duration, expired: false}
   }, {animate: false});
 }
 
@@ -132,9 +150,10 @@ async function checkExpiredPowers() {
   if (checking || !game.ready) return;
   checking = true;
   try {
-    for (const effect of timedEffects()) {
+    const timers = [...timedEffects()];
+    for (const effect of timers) {
       if (legacy(effect) && game.user.isDesignated(user => user.active && effect.actor.testUserPermission(user, "OWNER"))) {
-        const message = game.messages.find(message => message.getFlag(MODULE_ID, "maintainedCast") === effect.id);
+        const message = findCastMessage(MAINTAINED_CAST, effect.id);
         await effect.update({
           name: sbsI18n("swade-better-powers.UI.Powerduration_73d79ff70b"), showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON.NEVER,
           [`flags.${MODULE_ID}.timedPower`]: {name: effect.name.replace(/^Maintining: /, ""), userId: message?.author?.id ?? null},
@@ -148,11 +167,13 @@ async function checkExpiredPowers() {
         await effect.update({"duration.expired": true}, {animate: false});
       }
     }
+    let remaining = timers;
     for (;;) {
-      const expired = [...timedEffects()].find(effect => timing(effect) && !effect.disabled
+      const expired = remaining.find(effect => timing(effect) && !effect.disabled
         && promptUser(effect)?.isSelf && powerDurationEnded(effect));
       if (!expired) break;
       await resolveExpiration(expired);
+      remaining = [...timedEffects()];
     }
   } finally {
     checking = false;
@@ -172,13 +193,28 @@ export function installMaintenance() {
     for (const effect of original(...args)) if (!isDurationTracker(effect)) yield effect;
   });
   const check = () => { void checkExpiredPowers().catch(report); };
-  for (const event of ["ready", sbsI18n("swade-better-powers.UI.updateWorldTime_35272cec51"), sbsI18n("swade-better-powers.UI.updateCombat_b113e210aa"), sbsI18n("swade-better-powers.UI.deleteCombat_d0b7e5bed9"), sbsI18n("swade-better-powers.UI.canvasReady_e014fae8cf")]) Hooks.on(event, check);
+  for (const event of ["ready", "updateWorldTime", "updateCombat", "deleteCombat", "canvasReady"]) Hooks.on(event, check);
+  // Rebuild when an actor or synthetic actor can be replaced in bulk.
+  const invalidate = () => { timerUuids = undefined; };
+  for (const event of ["createActor", "deleteActor", "createToken", "deleteToken", "createScene", "deleteScene"]) Hooks.on(event, invalidate);
+  Hooks.on("updateActor", (_actor, changes) => { if (Object.hasOwn(changes, "effects")) invalidate(); });
+  Hooks.on("updateActorDelta", (_delta, changes) => { if (Object.hasOwn(changes, "effects")) invalidate(); });
+  Hooks.on("updateScene", (_scene, changes) => { if (Object.hasOwn(changes, "tokens")) invalidate(); });
+  Hooks.on("updateToken", (_token, changes) => {
+    if (Object.keys(changes).some(key => ["actorId", "actorLink", "delta"].includes(key.split(".")[0]))) invalidate();
+  });
+  Hooks.on("createActiveEffect", effect => { if (timerUuids) indexTimer(effect); });
   Hooks.on("updateActiveEffect", effect => {
+    if (timerUuids) {
+      timerUuids.delete(effect.uuid);
+      indexTimer(effect);
+    }
     if (!timing(effect)) return;
     if (expirationPrompt?.effect.uuid === effect.uuid && !powerDurationEnded(effect)) void expirationPrompt.dialog.close().catch(report);
     check();
   });
   Hooks.on("deleteActiveEffect", effect => {
+    timerUuids?.delete(effect.uuid);
     if (expirationPrompt?.effect.uuid === effect.uuid) void expirationPrompt.dialog.close().catch(report);
     if (isPowerTimer(effect) && game.users.activeGM?.isSelf) {
       for (const linked of linkedEffects(effect)) void linked.delete({animate: false}).catch(report);

@@ -4,6 +4,7 @@ import {trackPowerDuration} from "./maintenance.mjs";
 import {durationRates, resolvePowerDuration} from "./durations.mjs";
 import {castBehaviors, runCastBehaviors} from "./behavior-actions.mjs";
 import {isDamageBehavior, selectedBehaviors} from "./behavior-data.mjs";
+import {installCastHistory} from "./cast-history.mjs";
 
 const CAST = "powerCast";
 const MARKER = "sbpPowerCast";
@@ -44,7 +45,8 @@ export function updateCast(cast, item, choices, prepared, root) {
     input => [input.dataset.id, input.checked]));
   const modifiers = item.effects.filter(effect => effect.type === "modifier" && !effect.isSuppressed
     && (toggles.get(effect.id) ?? effect.active)).flatMap(effect => [effect.id, effect.name]);
-  const selected = getModifiers(item).flatMap(modifier => {
+  const available = choices?.size ? getModifiers(item) : [];
+  const selected = available.flatMap(modifier => {
     const option = modifier.options.find(option => option.id === choices?.get(modifier.id));
     if (!option) return [];
     modifiers.push(modifier.id, modifier.name, option.id);
@@ -52,7 +54,7 @@ export function updateCast(cast, item, choices, prepared, root) {
     return [[modifier.id, option.id]];
   });
   Object.assign(cast, {modifierOptions: Object.fromEntries(selected), modifiers, tags: prepared ? [PREPARATION] : []});
-  const behaviors = castBehaviors(item, cast.modifierOptions);
+  const behaviors = castBehaviors(item, cast.modifierOptions, available);
   const duration = rows => rows.map(row => row.change).filter(change => change.type === "adjustDuration");
   if (cast.noPP) cast.durationChanges = {modifiers: duration(behaviors.modifiers),
     raises: behaviors.raises.map(raise => ({...raise, changes: duration(raise.changes)}))};
@@ -76,12 +78,12 @@ export function castSuccesses(message, cast) {
 }
 
 const pending = new Map();
-export function getPowerDamageChanges(message, raise) {
+export function getPowerDamageChanges(message, raise, {preview = false} = {}) {
   const cast = getCast(message);
   const successes = cast?.damageChanges && castSuccesses(message, cast);
-  if (!successes) return [];
+  if (!successes && !preview || !cast?.damageChanges) return [];
   const {damageChanges} = cast;
-  if (raise == null) return selectedBehaviors(damageChanges, successes - 1, isDamageBehavior);
+  if (raise == null) return selectedBehaviors(damageChanges, Math.max(0, successes - 1), isDamageBehavior);
   const raises = damageChanges.raises.filter(entry => entry.level === raise);
   return selectedBehaviors({...damageChanges, raises}, raise, isDamageBehavior);
 }
@@ -106,6 +108,7 @@ function resolveCast(message, userId) {
 }
 
 export function installCastResults() {
+  installCastHistory();
   Hooks.on("preCreateChatMessage", (message, _data, _options, userId) => {
     if (userId !== game.user.id || getCast(message)) return;
     const cast = rollCast(message.rolls[0]);

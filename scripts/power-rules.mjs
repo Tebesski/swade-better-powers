@@ -1,6 +1,6 @@
 import {t as sbsI18n} from "./i18n.mjs";
 import {effectsAPI, MAINTENANCE, MODULE_ID, normalizeName, PREPARATION, readPowerFlag} from "./constants.mjs";
-import {noPP, spellcastingEntries, powerPointBreakdown} from "./powers-data.mjs";
+import {noPP, noPPForActor, spellcastingEntries, powerPointBreakdown} from "./powers-data.mjs";
 import {startCast, updateCast} from "./cast-results.mjs";
 import {powerDurationEnded} from "./maintenance.mjs";
 import {importSwadeTools} from "./tools-imports.mjs";
@@ -9,7 +9,10 @@ import {powerDescription} from "./power-modifiers.mjs";
 export {noPP};
 const rollCosts = new WeakMap();
 export const recordPowerCost = (power, cost) => { if (Number.isFinite(Number(cost))) rollCosts.set(power, Math.max(0, Number(cost))); };
-export const maintainedPowers = actor => actor.itemTypes.power.filter(item => noPP(item) && readPowerFlag(item, "maintained"));
+export function maintainedPowers(actor) {
+  const maintained = actor.itemTypes.power.filter(item => readPowerFlag(item, "maintained"));
+  return maintained.length ? maintained.filter(noPPForActor(actor)) : maintained;
+}
 const powerModifier = (actor, item, flag, value) => effectsAPI()?.powerRollModifier?.(actor, item, flag, value) ?? value;
 export const preparation = (actor, item) => powerModifier(actor, item, PREPARATION, 2);
 
@@ -21,13 +24,15 @@ export function powerRollModifiers(actor, skill, modifiers, options) {
   const castingCost = isPower ? Math.max(0, options.sbsPowerCost ?? capturedCost ?? item.system.ppModifiers.cost) : undefined;
   if (isPower) rollCosts.delete(item);
   const traits = new Set([skill?.name ?? skill, skill?.system?.swid].map(normalizeName).filter(Boolean));
-  const entryTrait = () => spellcastingEntries(actor).some(entry => traits.has(normalizeName(entry.trait)));
+  let matchesEntry;
+  const entryTrait = () => matchesEntry ??= spellcastingEntries(actor).some(entry => traits.has(normalizeName(entry.trait)));
   const rawArcaneSkill = (!item || item.type === "skill") && skill?.type === "skill"
     && (entryTrait() || actor.itemTypes.power.some(power => traits.has(normalizeName(power.system.actions.trait))));
   if (!isPower && !rawArcaneSkill && (item || !entryTrait())) return;
   if (isPower && game.settings.get("swade", "noPowerPoints")) {
     // Replace the world's native casting penalty so explicit per-entry overrides work both ways.
-    for (let index = modifiers.length - 1; index >= 0; index--) if (modifiers[index].label === game.i18n.localize("TYPES.Item.power")) modifiers.splice(index, 1);
+    const powerLabel = game.i18n.localize("TYPES.Item.power");
+    for (let index = modifiers.length - 1; index >= 0; index--) if (modifiers[index].label === powerLabel) modifiers.splice(index, 1);
   }
   if (isPower || rawArcaneSkill) {
     let value;

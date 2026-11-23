@@ -184,11 +184,14 @@ async function applyCastEffects({messageId, tokenUuid, choices}, {user}) {
   if (duration) await trackPowerDuration(message, {...cast, duration}, {restoreMissing: true});
   const timer = duration && item.actor.effects.get(cast.id);
   const effects = await prepareEffectSources(sources, {item, user});
-  if (timer) for (const effect of effects) {
-    effect.flags ??= {};
-    effect.flags[MODULE_ID] = {...effect.flags[MODULE_ID], powerTimer: timer.uuid};
-    effect.start = timer.toObject().start;
-    effect.duration = {...timer.toObject().duration, expired: false};
+  if (timer) {
+    const {start, duration} = timer.toObject();
+    for (const effect of effects) {
+      effect.flags ??= {};
+      effect.flags[MODULE_ID] = {...effect.flags[MODULE_ID], powerTimer: timer.uuid};
+      effect.start = {...start};
+      effect.duration = {...duration, expired: false};
+    }
   }
   await token.actor.createEmbeddedDocuments("ActiveEffect", effects);
   return true;
@@ -238,8 +241,9 @@ function renderEffectControls(message, html) {
     rows = document.createElement("section"); rows.className = "sbe-target-responses sbp-effect-targets"; content.append(rows);
   }
   const applyControls = [];
+  const rowsByUuid = new Map(Array.from(rows?.querySelectorAll(".sbe-target-row") ?? [], row => [row.dataset.tokenUuid, row]));
   for (const token of targets) {
-    let row = [...rows.querySelectorAll(".sbe-target-row")].find(row => row.dataset.tokenUuid === token.uuid);
+    let row = rowsByUuid.get(token.uuid);
     if (!row) {
       row = document.createElement("div"); row.className = "sbe-target-row"; row.dataset.tokenUuid = token.uuid;
       const name = document.createElement("span"); name.className = "sbe-target-name";
@@ -261,7 +265,8 @@ function renderEffectControls(message, html) {
   let choices = localChoices.get(message) ?? castChoices(message, cast, config);
   let busy = false;
   const refresh = () => {
-    for (const apply of applyControls) apply.setAttribute("aria-disabled", String(busy || !chosenEffects(config, choices).length));
+    const disabled = String(busy || !chosenEffects(config, choices).length);
+    for (const apply of applyControls) apply.setAttribute("aria-disabled", disabled);
     options.disabled = busy || !variants;
   };
   const run = action => async event => {

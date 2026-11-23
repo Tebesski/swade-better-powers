@@ -5,7 +5,11 @@ import {entryArcane, GENERAL, parseArcaneSkill, powerArcane, spellcastingEntries
 const queues = new Map();
 export function queueActor(actor, operation) {
   const next = (queues.get(actor.uuid) ?? Promise.resolve()).then(operation);
-  queues.set(actor.uuid, next.catch(() => {}));
+  const key = actor.uuid;
+  const settled = next.catch(() => {}).then(() => {
+    if (queues.get(key) === settled) queues.delete(key);
+  });
+  queues.set(key, settled);
   return next;
 }
 export const owned = actor => { if (!actor?.isOwner) throw new Error(sbsI18n("swade-better-powers.UI.Youdonothavepermissionto_e12b555e4a")); };

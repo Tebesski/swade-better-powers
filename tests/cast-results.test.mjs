@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {parseDuration, castSuccesses} from "../scripts/cast-results.mjs";
+import {parseDuration, castSuccesses, getPowerDamageChanges} from "../scripts/cast-results.mjs";
+import {getPowerDamageOptions} from "../scripts/power-damage.mjs";
 import {resolvePowerDuration} from "../scripts/durations.mjs";
 
 test("modifier duration changes run before the highest applicable earned raise", () => {
@@ -36,4 +37,22 @@ test("cast outcomes account for the target number and critical failure", () => {
   assert.equal(castSuccesses(message(12, [5, 6]), {targetNumber: 8}), 2);
   assert.equal(castSuccesses(message(7, [5, 6]), {targetNumber: 8}), 0);
   assert.equal(castSuccesses(message(12, [1, 1]), {targetNumber: 4}), 0);
+});
+
+test("modifier-only damage is discoverable on failed casts without granting damage from a failed roll", () => {
+  const row = {source: "Damaging", change: {type: "addDamageDice", enabled: true, system: {formula: "2d4x"}}};
+  const cast = {itemUuid: "Actor.caster.Item.launch", targetNumber: 4, damageChanges: {modifiers: [row], raises: []}};
+  const message = {flags: {}, rolls: [{total: 2, terms: [], dice: []}], getFlag: () => cast};
+  assert.deepEqual(getPowerDamageChanges(message), []);
+  assert.deepEqual(getPowerDamageChanges(message, undefined, {preview: true}), [row]);
+  const oldGame = globalThis.game, oldFoundry = globalThis.foundry;
+  const item = {uuid: cast.itemUuid, actor: {}, system: {damage: "", actions: {additional: {}}}};
+  globalThis.game = {modules: {get: () => null}};
+  globalThis.foundry = {utils: {fromUuidSync: () => item}};
+  try {
+    const preview = getPowerDamageOptions(message, {preview: true});
+    assert.equal(preview.hasDamage, true);
+    assert.match(preview.formula, /2d4x/);
+    assert.equal(getPowerDamageOptions(message).hasDamage, false);
+  } finally { globalThis.game = oldGame; globalThis.foundry = oldFoundry; }
 });

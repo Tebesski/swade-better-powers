@@ -16,7 +16,7 @@ try {
   await page.getByRole("button", {name: "Join Game Session", exact: true}).click();
   await page.waitForFunction(() => globalThis.game?.ready);
   assert.equal(await page.evaluate(() => game.world.id), "better-setting-qa", "Refusing to modify a campaign world");
-  await page.addStyleTag({content: "#notifications {pointer-events: none !important}"});
+  await page.addStyleTag({content: "#notifications, .tour, .tour-overlay {pointer-events: none !important}"});
   const result = await page.evaluate(async ({id, prefix}) => {
     const service = await import("/modules/swade-better-powers/scripts/spellcasting.mjs");
     const mod = await import("/modules/swade-better-powers/scripts/power-modifiers.mjs");
@@ -108,6 +108,7 @@ try {
   assert.deepEqual(layout, {count: 1, insideSheet: true, bounded: true, controlsFit: true});
   assert.ok(await page.locator('.sbs-no-pp-text').count());
   const powerRow = page.locator('.sbs-power').filter({hasText: `${prefix} Power`});
+  assert.equal(await powerRow.locator('.sbs-power-description').textContent(), "");
   await powerRow.locator('.power-header').focus();
   await page.keyboard.press("Enter");
   const accordion = powerRow.locator('.sbs-power-description + details.sbs-power-modifier-summary');

@@ -21,22 +21,38 @@ export function spellcastingEntries(actor) {
   const general = {id: GENERAL, name: sbsI18n("swade-better-powers.UI.General_c910d474dc"), arcane: GENERAL, trait: "", ...stored.find(e => e.arcane === GENERAL)};
   const entries = stored.filter(entry => entry.arcane !== GENERAL).map(entry => ({...entry}));
   if (readPowerFlag(actor, "generalSpellcastingRemoved") !== true) entries.unshift(general);
+  const known = new Set(entries.map(entry => normalizeName(entry.arcane)));
   for (const power of actor.itemTypes?.power ?? []) {
     const arcane = powerArcane(power);
-    if (entries.some(e => normalizeName(e.arcane) === normalizeName(arcane))) continue;
-    if (normalizeName(arcane) === GENERAL) entries.unshift(general);
+    const key = normalizeName(arcane);
+    if (known.has(key)) continue;
+    known.add(key);
+    if (key === GENERAL) entries.unshift(general);
     else entries.push({id: `existing-${power.id}`, arcane, name: arcane, trait: power.system.actions?.trait ?? ""});
   }
   return entries.length ? entries : [general];
 }
 export function entryForPower(power) {
-  return power.actor ? spellcastingEntries(power.actor).find(e => normalizeName(e.arcane) === normalizeName(powerArcane(power))) : null;
+  if (!power.actor) return null;
+  const key = normalizeName(powerArcane(power));
+  return spellcastingEntries(power.actor).find(e => normalizeName(e.arcane) === key);
 }
 export function usesNoPowerPoints(power, worldDefault = false) {
   const entry = entryForPower(power);
   return entry?.noPowerPoints ?? worldDefault;
 }
 export const noPP = power => power?.type === "power" && usesNoPowerPoints(power, game.settings.get("swade", "noPowerPoints"));
+
+// Batch callers use the same entry lookup for every power on this actor.
+export function noPPForActor(actor) {
+  const worldNoPP = game.settings.get("swade", "noPowerPoints");
+  const byArcane = new Map();
+  for (const entry of spellcastingEntries(actor)) {
+    const key = normalizeName(entry.arcane);
+    if (!byArcane.has(key)) byArcane.set(key, entry.noPowerPoints ?? worldNoPP);
+  }
+  return power => byArcane.get(normalizeName(powerArcane(power))) ?? worldNoPP;
+}
 export function castingPenalty(cost, maintained = 0) {
   const penalty = Math.ceil(Math.max(0, Number(cost) || 0) / 2) + Math.max(0, Number(maintained) || 0);
   return -penalty;
